@@ -17,6 +17,7 @@ export type MapPerson = {
   name: string;
   url: string;
   city: string;
+  connectedOn?: string;
 };
 
 type CityGroup = {
@@ -52,6 +53,7 @@ export default function LinkedInContactsMap({
   const [cityGroups, setCityGroups] = useState<CityGroups>({});
   const [selectedCity, setSelectedCity] = useState<CityGroup | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [status, setStatus] = useState<Status>({ message: "", type: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -220,6 +222,7 @@ export default function LinkedInContactsMap({
       el.style.zIndex = String(10 + count);
 
       el.addEventListener("click", () => {
+        // Store the raw group and let the panel UI apply sorting based on `sortOrder`
         setSelectedCity(group);
         setIsPanelOpen(true);
 
@@ -643,17 +646,49 @@ export default function LinkedInContactsMap({
         <div className="main-content">
           <aside className={`side-panel ${isPanelOpen ? "open" : ""}`}>
             <div className="panel-header">
-              <h2>
-                <span>{selectedCity?.city || "City"}</span>
-                <span className="count">{selectedCity?.people?.length || 0}</span>
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <h2>
+                  <span>{selectedCity?.city || "City"}</span>
+                  <span className="count">{selectedCity?.people?.length || 0}</span>
+                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <label htmlFor="sort-order" style={{ fontSize: 12, color: "#64748b" }}>
+                    Sort:
+                  </label>
+                  <select
+                    id="sort-order"
+                    value={sortOrder}
+                    onChange={(e) =>
+                      setSortOrder(e.target.value === "oldest" ? "oldest" : "newest")
+                    }
+                    style={{
+                      borderRadius: 6,
+                      padding: "6px 8px",
+                      fontSize: 13,
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <option value="newest">Latest</option>
+                    <option value="oldest">Oldest</option>
+                  </select>
+                </div>
+              </div>
               <button className="close-btn" onClick={closePanel}>
                 ×
               </button>
             </div>
             <div className="panel-content">
-              {selectedCity?.people?.map((person, idx) => (
-                <div key={`${person.name}-${idx}`} className="person-card">
+              {(() => {
+                const peopleToShow = selectedCity
+                  ? [...selectedCity.people].sort((a, b) => {
+                      const ta = a.connectedOn ? new Date(a.connectedOn).getTime() : 0;
+                      const tb = b.connectedOn ? new Date(b.connectedOn).getTime() : 0;
+                      return sortOrder === "newest" ? tb - ta : ta - tb;
+                    })
+                  : [];
+
+                return peopleToShow.map((person, idx) => (
+                  <div key={`${person.name}-${idx}`} className="person-card">
                   <div className="person-name">{person.name}</div>
                   {person.url ? (
                     <a
@@ -682,7 +717,8 @@ export default function LinkedInContactsMap({
                     <span className="no-url">No profile URL</span>
                   )}
                 </div>
-              ))}
+                ));
+              })()}
             </div>
           </aside>
 
