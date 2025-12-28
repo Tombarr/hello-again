@@ -37,8 +37,10 @@ jobs:
           owner="${GITHUB_REPOSITORY%%/*}"
           if [ "$repo" = "$owner.github.io" ]; then
             echo "BASE_PATH=" >> "$GITHUB_ENV"
+            echo "NEXT_PUBLIC_BASE_PATH=" >> "$GITHUB_ENV"
           else
             echo "BASE_PATH=/$repo" >> "$GITHUB_ENV"
+            echo "NEXT_PUBLIC_BASE_PATH=/$repo" >> "$GITHUB_ENV"
           fi
 
       - name: Build

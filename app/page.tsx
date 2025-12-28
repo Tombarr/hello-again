@@ -13,6 +13,8 @@ const body = Work_Sans({
   weight: ["400", "500", "600"],
 });
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 export default function Home() {
   return (
     <div className={`${body.className} min-h-screen bg-[#f6f1ea] text-[#1d1c1a]`}>
@@ -83,7 +85,7 @@ export default function Home() {
                     </span>
                     <div className="overflow-hidden rounded-2xl border border-[#1d1c1a]/10 bg-white/90 shadow-[0_18px_45px_-30px_rgba(0,0,0,0.45)]">
                       <Image
-                        src="/select-all-boxes.png"
+                        src={`${basePath}/select-all-boxes.png`}
                         alt="LinkedIn data export selection boxes"
                         width={780}
                         height={480}
