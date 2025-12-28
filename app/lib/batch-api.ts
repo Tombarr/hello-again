@@ -461,17 +461,28 @@ export async function importBatch(
   batchId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check batch status to get latest info
-    const statusResult = await checkBatchStatus(batchId);
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      return { success: false, error: "API key not found" };
+    }
 
-    if (!statusResult.success || !statusResult.status) {
+    // Fetch batch info directly from OpenAI (don't use checkBatchStatus as it tries to update existing)
+    const response = await fetch(`${OPENAI_API_BASE}/batches/${batchId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
       return {
         success: false,
-        error: statusResult.error || "Failed to fetch batch status",
+        error: `Failed to fetch batch: ${JSON.stringify(error)}`,
       };
     }
 
-    const batchData = statusResult.status;
+    const batchData = await response.json();
 
     // Create StoredBatch object
     const storedBatch: StoredBatch = {
