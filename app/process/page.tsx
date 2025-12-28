@@ -646,13 +646,14 @@ export default function ProcessPage() {
               </div>
             )}
 
-            <div className="mt-8">
-              <LinkedInContactsMap
-                externalPeople={mapPeople}
-                externalLoading={isMapLoading}
-              />
-            </div>
           </div>
+        </section>
+
+        <section className="relative mx-auto max-w-6xl px-6 pb-20 sm:px-10 lg:px-16">
+          <LinkedInContactsMap
+            externalPeople={mapPeople}
+            externalLoading={isMapLoading}
+          />
         </section>
       </main>
     </div>
