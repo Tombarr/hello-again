@@ -1,7 +1,12 @@
+"use client";
+
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import ApiKeyInput from "./components/ApiKeyInput";
 import UploadArea from "./components/UploadArea";
 import LinkedInContactsMap from "./components/LinkedInContactsMap";
+import { hasZipFile } from "./lib/indexeddb";
 import { Fraunces, Work_Sans } from "next/font/google";
 
 const display = Fraunces({
@@ -17,6 +22,32 @@ const body = Work_Sans({
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export default function Home() {
+  const router = useRouter();
+  const [hasFile, setHasFile] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkFile = async () => {
+      const fileExists = await hasZipFile();
+      if (isMounted) {
+        setHasFile(fileExists);
+      }
+    };
+
+    void checkFile();
+
+    // Re-check periodically in case file is uploaded
+    const interval = setInterval(() => {
+      void checkFile();
+    }, 2000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div className={`${body.className} min-h-screen bg-[#f6f1ea] text-[#1d1c1a]`}>
       <main className="relative overflow-hidden">
@@ -240,6 +271,15 @@ export default function Home() {
               <div className="w-full space-y-6">
                 <ApiKeyInput />
                 <UploadArea />
+
+                {hasFile && (
+                  <button
+                    onClick={() => router.push("/process")}
+                    className="w-full rounded-full bg-[#7fd1c7] px-7 py-3 text-sm font-semibold text-[#1d1c1a] transition hover:-translate-y-0.5 hover:bg-[#6fc0b7]"
+                  >
+                    Continue to Process Data →
+                  </button>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-6 text-xs uppercase tracking-[0.3em] text-[#7b7872]">
