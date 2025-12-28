@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 interface LinkedInProfileImageProps {
   /** LinkedIn profile URL */
   profileUrl: string;
@@ -14,88 +12,42 @@ interface LinkedInProfileImageProps {
 }
 
 /**
- * Lazy-loaded LinkedIn profile image component
- * Uses ogfetch proxy to fetch profile images with fallback to SVG avatar
+ * LinkedIn profile image component with static SVG avatar placeholder
  */
 export default function LinkedInProfileImage({
-  profileUrl,
+  profileUrl: _profileUrl,
   alt,
   size = 40,
   className = "",
 }: LinkedInProfileImageProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
-
-  // Construct proxy URL
-  const proxyUrl = ``;
-
   return (
     <div
-      className={`relative overflow-hidden rounded-full bg-[#1d1c1a]/5 ${className}`}
+      className={`relative overflow-hidden rounded-full bg-[#e8eef3] ${className}`}
       style={{ width: size, height: size }}
+      title={alt}
     >
-      {/* Skeleton loader */}
-      {!isLoaded && (
-        <div
-          className="absolute inset-0 animate-pulse bg-gradient-to-r from-[#1d1c1a]/10 via-[#1d1c1a]/5 to-[#1d1c1a]/10"
-          style={{
-            backgroundSize: "200% 100%",
-            animation: "shimmer 1.5s infinite",
-          }}
+      {/* Static SVG Avatar */}
+      <svg
+        aria-hidden="true"
+        role="none"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 128 128"
+        className="h-full w-full"
+      >
+        <path fill="transparent" d="M0 0h128v128H0z" />
+        <path
+          d="M88.41 84.67a32 32 0 10-48.82 0 66.13 66.13 0 0148.82 0z"
+          fill="#788fa5"
         />
-      )}
-
-      {/* Profile image */}
-      <img
-        src={proxyUrl}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        className={`h-full w-full object-cover transition-opacity duration-300 ${
-          isLoaded ? "opacity-100" : "opacity-0"
-        }`}
-        onLoad={() => setIsLoaded(true)}
-        onError={() => {
-          setHasError(true);
-          setIsLoaded(true);
-        }}
-      />
-
-      {/* Error state - show initials */}
-      {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#1d1c1a] text-xs font-semibold text-[#f6f1ea]">
-          {getInitials(alt)}
-        </div>
-      )}
-
-      <style jsx>{`
-        @keyframes shimmer {
-          0% {
-            background-position: -200% 0;
-          }
-          100% {
-            background-position: 200% 0;
-          }
-        }
-      `}</style>
+        <path
+          d="M88.41 84.67a32 32 0 01-48.82 0A66.79 66.79 0 000 128h128a66.79 66.79 0 00-39.59-43.33z"
+          fill="#9db3c8"
+        />
+        <path
+          d="M64 96a31.93 31.93 0 0024.41-11.33 66.13 66.13 0 00-48.82 0A31.93 31.93 0 0064 96z"
+          fill="#56687a"
+        />
+      </svg>
     </div>
   );
-}
-
-/**
- * Get initials from a name
- */
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(p => p.length > 0);
-  if (parts.length === 0) return "?";
-
-  const firstPart = parts[0];
-  if (!firstPart) return "?";
-
-  if (parts.length === 1) return firstPart.charAt(0).toUpperCase();
-
-  const lastPart = parts[parts.length - 1];
-  if (!lastPart) return firstPart.charAt(0).toUpperCase();
-
-  return firstPart.charAt(0).toUpperCase() + lastPart.charAt(0).toUpperCase();
 }
