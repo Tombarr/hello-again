@@ -19,6 +19,8 @@ export type MapPerson = {
   url: string;
   city: string;
   connectedOn?: string;
+  position?: string;
+  company?: string;
 };
 
 type CityGroup = {
@@ -480,10 +482,23 @@ export default function LinkedInContactsMap({
           font-weight: 600;
           color: #1e293b;
           font-size: 1rem;
+          margin-bottom: 4px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .linkedin-map .person-job {
+          font-size: 0.875rem;
+          color: #64748b;
           margin-bottom: 8px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .linkedin-map .job-separator {
+          color: #94a3b8;
         }
 
         .linkedin-map .person-link {
@@ -748,6 +763,15 @@ export default function LinkedInContactsMap({
                       )}
                       <div className="person-details">
                         <div className="person-name">{person.name}</div>
+                        {(person.position || person.company) && (
+                          <div className="person-job">
+                            {person.position && <span>{person.position}</span>}
+                            {person.position && person.company && (
+                              <span className="job-separator"> at </span>
+                            )}
+                            {person.company && <span>{person.company}</span>}
+                          </div>
+                        )}
                         {person.url ? (
                           <a
                             href={person.url}

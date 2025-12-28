@@ -252,6 +252,10 @@ export default function ProcessPage() {
             connectedOn: connection.connectedOn ?? "",
           };
 
+          // Add optional fields only if they have values
+          if (connection.position) person.position = connection.position;
+          if (connection.company) person.company = connection.company;
+
           return [person];
         });
 
