@@ -109,12 +109,15 @@ export default function LinkedInContactsMap({
     try {
       const response = await fetch(url);
       const data = (await response.json()) as {
-        features?: Array<{ center: [number, number] }>;
+        features?: Array<{ center?: [number, number] }>;
       };
 
       if (data.features && data.features.length > 0) {
-        const [lng, lat] = data.features[0].center;
-        return { lng, lat };
+        const center = data.features[0]?.center;
+        if (center && center.length === 2) {
+          const [lng, lat] = center;
+          return { lng, lat };
+        }
       }
     } catch (error) {
       console.error("Geocoding error for", cityName, error);
@@ -144,21 +147,21 @@ export default function LinkedInContactsMap({
       }
     });
 
-    const uniqueCities = Object.keys(groups);
+    const uniqueCities = Object.entries(groups);
     let geocoded = 0;
 
-    for (const cityKey of uniqueCities) {
-      const cityName = groups[cityKey].city;
+    for (const [cityKey, group] of uniqueCities) {
+      const cityName = group.city;
 
-      if (!groups[cityKey].coords && !geocodeCacheRef.current[cityKey]) {
+      if (!group.coords && !geocodeCacheRef.current[cityKey]) {
         const coords = await geocodeCity(cityName);
         if (coords) {
           geocodeCacheRef.current[cityKey] = coords;
         }
       }
 
-      if (geocodeCacheRef.current[cityKey] && !groups[cityKey].coords) {
-        groups[cityKey].coords = geocodeCacheRef.current[cityKey];
+      if (geocodeCacheRef.current[cityKey] && !group.coords) {
+        group.coords = geocodeCacheRef.current[cityKey];
       }
 
       geocoded += 1;
@@ -194,6 +197,8 @@ export default function LinkedInContactsMap({
 
       hasMarkers = true;
       const count = group.people.length;
+      const coords = group.coords;
+      if (!coords) return;
 
       const el = document.createElement("div");
       el.className = "cluster-marker";
@@ -214,18 +219,18 @@ export default function LinkedInContactsMap({
         setIsPanelOpen(true);
 
         map.current?.flyTo({
-          center: [group.coords.lng, group.coords.lat],
+          center: [coords.lng, coords.lat],
           zoom: 10,
           duration: 1500,
         });
       });
 
       const marker = new mapboxgl.Marker(el)
-        .setLngLat([group.coords.lng, group.coords.lat])
+        .setLngLat([coords.lng, coords.lat])
         .addTo(map.current);
 
       markersRef.current.push(marker);
-      bounds.extend([group.coords.lng, group.coords.lat]);
+      bounds.extend([coords.lng, coords.lat]);
     });
 
     if (hasMarkers && map.current) {

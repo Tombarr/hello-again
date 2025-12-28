@@ -6,6 +6,7 @@ import { Fraunces, Work_Sans } from "next/font/google";
 import LinkedInContactsMap, {
   type MapPerson,
 } from "../components/LinkedInContactsMap";
+import type { EnrichedConnection } from "../lib/batch-results";
 import { getUserProfile, type LinkedInProfile } from "../lib/profile-utils";
 import {
   getAllBatches,
@@ -213,30 +214,34 @@ export default function ProcessPage() {
       const result = await processBatchWithConnections(batch.outputFileId);
 
       if (result.success && Array.isArray(result.data)) {
-        const people: MapPerson[] = result.data
-          .map((connection) => {
-            const city = connection.location?.city;
-            if (!city) return null;
+        const connections = result.data as EnrichedConnection[];
+        const people: MapPerson[] = connections.flatMap((connection) => {
+          const city = connection.location?.city;
+          if (!city) return [];
 
-            const country = connection.location?.country;
-            const name = `${connection.firstName ?? ""} ${connection.lastName ?? ""}`.trim();
-            const coords =
-              connection.location?.lat != null &&
-              connection.location?.lng != null
-                ? {
-                    lat: connection.location.lat,
-                    lng: connection.location.lng,
-                  }
-                : undefined;
+          const country = connection.location?.country;
+          const name = `${connection.firstName ?? ""} ${connection.lastName ?? ""}`.trim();
+          const coords =
+            connection.location?.lat != null &&
+            connection.location?.lng != null
+              ? {
+                  lat: connection.location.lat,
+                  lng: connection.location.lng,
+                }
+              : null;
 
-            return {
-              name: name || "Unknown",
-              url: connection.url ?? "",
-              city: country ? `${city}, ${country}` : city,
-              coords,
-            };
-          })
-          .filter((person): person is MapPerson => Boolean(person));
+          const person: MapPerson = {
+            name: name || "Unknown",
+            url: connection.url ?? "",
+            city: country ? `${city}, ${country}` : city,
+          };
+
+          if (coords) {
+            person.coords = coords;
+          }
+
+          return [person];
+        });
 
         setMapPeople(people);
         setSuccess(
