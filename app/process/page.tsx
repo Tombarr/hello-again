@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Fraunces, Work_Sans } from "next/font/google";
-import LinkedInContactsMap from "../components/LinkedInContactsMap";
+import LinkedInContactsMap, {
+  type MapPerson,
+} from "../components/LinkedInContactsMap";
 import { getUserProfile, type LinkedInProfile } from "../lib/profile-utils";
 import {
   getAllBatches,
@@ -38,6 +40,7 @@ export default function ProcessPage() {
   const [limit, setLimit] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [mapPeople, setMapPeople] = useState<MapPerson[]>([]);
 
   // Load profile and batches
   useEffect(() => {
@@ -200,25 +203,44 @@ export default function ProcessPage() {
     }
   };
 
-  const handleMergeAndLog = async (batch: StoredBatch) => {
+  const handleShowInMap = async (batch: StoredBatch) => {
     if (!batch.outputFileId) {
       setError("No output file available");
       return;
     }
 
     try {
-      console.log("🔄 Starting merge process...");
       const result = await processBatchWithConnections(batch.outputFileId);
 
-      if (result.success) {
-        console.log("✅ Successfully merged connections with batch results!");
-        console.log("\n📊 Statistics:");
-        console.log(result.stats);
-        console.log("\n📋 Enriched Connections Data:");
-        console.log(result.data);
+      if (result.success && Array.isArray(result.data)) {
+        const people: MapPerson[] = result.data
+          .map((connection) => {
+            const city = connection.location?.city;
+            if (!city) return null;
 
+            const country = connection.location?.country;
+            const name = `${connection.firstName ?? ""} ${connection.lastName ?? ""}`.trim();
+            const coords =
+              connection.location?.lat != null &&
+              connection.location?.lng != null
+                ? {
+                    lat: connection.location.lat,
+                    lng: connection.location.lng,
+                  }
+                : undefined;
+
+            return {
+              name: name || "Unknown",
+              url: connection.url ?? "",
+              city: country ? `${city}, ${country}` : city,
+              coords,
+            };
+          })
+          .filter((person): person is MapPerson => Boolean(person));
+
+        setMapPeople(people);
         setSuccess(
-          `Merged data logged to console! Check browser dev tools. ${result.stats?.enriched || 0} connections enriched.`
+          `Loaded ${people.length} connections into the map.`
         );
         setTimeout(() => setSuccess(null), 5000);
       } else {
@@ -433,11 +455,11 @@ export default function ProcessPage() {
                         {batch.status === "completed" && batch.outputFileId && (
                           <>
                             <button
-                              onClick={() => handleMergeAndLog(batch)}
+                              onClick={() => handleShowInMap(batch)}
                               className="rounded-full border border-[#1d1c1a]/20 bg-[#7fd1c7] px-4 py-2 text-xs font-semibold text-[#1d1c1a] transition hover:bg-[#6dc1b7]"
-                              title="Merge with connections and log to console"
+                              title="Show merged connections in map"
                             >
-                              Merge & Log
+                              Show in map
                             </button>
                             <button
                               onClick={() => handleDownload(batch)}
@@ -471,7 +493,7 @@ export default function ProcessPage() {
             )}
 
             <div className="mt-8">
-              <LinkedInContactsMap />
+              <LinkedInContactsMap externalPeople={mapPeople} />
             </div>
           </div>
         </section>

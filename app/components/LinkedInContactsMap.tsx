@@ -2,27 +2,27 @@
 
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import Papa from "papaparse";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const MAPBOX_TOKEN =
   process.env.NEXT_PUBLIC_MAPBOX_TOKEN ??
   "pk.eyJ1IjoiYmhhdGFuZXJvaGFuIiwiYSI6ImNtZTllbnh5azBrb3oyam9jd2QzNXpwMngifQ.3UtCGh7Y1_1AUYrs0CJ7pg";
 
-type Person = {
-  name: string;
-  url: string;
-  city: string;
-};
-
 type CityCoords = {
   lng: number;
   lat: number;
 };
 
+export type MapPerson = {
+  name: string;
+  url: string;
+  city: string;
+  coords?: CityCoords;
+};
+
 type CityGroup = {
   city: string;
-  people: Person[];
+  people: MapPerson[];
   coords?: CityCoords;
 };
 
@@ -35,12 +35,17 @@ type Status = {
 
 type CityGroups = Record<string, CityGroup>;
 
-export default function LinkedInContactsMap() {
+type LinkedInContactsMapProps = {
+  externalPeople?: MapPerson[];
+};
+
+export default function LinkedInContactsMap({
+  externalPeople,
+}: LinkedInContactsMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const geocodeCacheRef = useRef<Record<string, CityCoords>>({});
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [cityGroups, setCityGroups] = useState<CityGroups>({});
@@ -117,68 +122,15 @@ export default function LinkedInContactsMap() {
     return null;
   };
 
-  const handleCSVUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    setLoadingText("Parsing CSV...");
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        try {
-          await processCSVData(results.data as Array<Record<string, string>>);
-        } catch (error) {
-          setIsLoading(false);
-          showStatus("Error: " + (error as Error).message, "error");
-        }
-      },
-      error: () => {
-        setIsLoading(false);
-        showStatus("CSV parsing error", "error");
-      },
-    });
-  };
-
-  const processCSVData = async (data: Array<Record<string, string>>) => {
-    const processed = data
-      .map((row) => {
-        const name =
-          row.Name ??
-          row.name ??
-          row.NAME ??
-          row.FullName ??
-          row.From ??
-          row.To ??
-          "";
-        const url =
-          row.ProfileURL ??
-          row.profileURL ??
-          row.URL ??
-          row.url ??
-          row.LinkedInURL ??
-          row.inviterProfileUrl ??
-          row.inviteeProfileUrl ??
-          "";
-        const city =
-          row.City ?? row.city ?? row.CITY ?? row.Location ?? row.location ?? "";
-
-        return { name: name.trim(), url: url.trim(), city: city.trim() };
-      })
-      .filter((person) => person.name && person.city);
-
-    if (processed.length === 0) {
+  const processPeopleList = async (people: MapPerson[]) => {
+    if (people.length === 0) {
       setIsLoading(false);
       showStatus("No valid data found. Need Name and City columns.", "error");
       return;
     }
 
     const groups: CityGroups = {};
-    processed.forEach((person) => {
+    people.forEach((person) => {
       const cityKey = person.city.toLowerCase();
       if (!groups[cityKey]) {
         groups[cityKey] = {
@@ -187,6 +139,9 @@ export default function LinkedInContactsMap() {
         };
       }
       groups[cityKey].people.push(person);
+      if (person.coords && !groups[cityKey].coords) {
+        groups[cityKey].coords = person.coords;
+      }
     });
 
     const uniqueCities = Object.keys(groups);
@@ -195,14 +150,14 @@ export default function LinkedInContactsMap() {
     for (const cityKey of uniqueCities) {
       const cityName = groups[cityKey].city;
 
-      if (!geocodeCacheRef.current[cityKey]) {
+      if (!groups[cityKey].coords && !geocodeCacheRef.current[cityKey]) {
         const coords = await geocodeCity(cityName);
         if (coords) {
           geocodeCacheRef.current[cityKey] = coords;
         }
       }
 
-      if (geocodeCacheRef.current[cityKey]) {
+      if (geocodeCacheRef.current[cityKey] && !groups[cityKey].coords) {
         groups[cityKey].coords = geocodeCacheRef.current[cityKey];
       }
 
@@ -215,10 +170,17 @@ export default function LinkedInContactsMap() {
     setHasData(true);
     setIsLoading(false);
     showStatus(
-      `Loaded ${processed.length} contacts in ${uniqueCities.length} cities`,
+      `Loaded ${people.length} contacts in ${uniqueCities.length} cities`,
       "success",
     );
   };
+
+  useEffect(() => {
+    if (!externalPeople || externalPeople.length === 0) return;
+    setIsLoading(true);
+    setLoadingText("Preparing map data...");
+    void processPeopleList(externalPeople);
+  }, [externalPeople]);
 
   const renderMarkers = () => {
     markersRef.current.forEach((marker) => marker.remove());
@@ -637,35 +599,6 @@ export default function LinkedInContactsMap() {
         <header className="header">
           <h1>📍 LinkedIn Contacts Map</h1>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            id="csv-input"
-            accept=".csv"
-            onChange={handleCSVUpload}
-            style={{ display: "none" }}
-          />
-          <button
-            className="upload-btn"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <svg
-              width="18"
-              height="18"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-              />
-            </svg>
-            Upload CSV
-          </button>
-
           {status.message && (
             <span className={`status-badge ${status.type}`}>
               {status.message}
@@ -735,11 +668,8 @@ export default function LinkedInContactsMap() {
                   </svg>
                 </div>
                 <div className="hint-text">
-                  <h4>Upload your CSV to get started</h4>
-                  <p>
-                    Expected columns: <code>Name</code>, <code>ProfileURL</code>,{" "}
-                    <code>City</code>
-                  </p>
+                  <h4>No map data yet</h4>
+                  <p>Run a batch and click “Show in map” to load contacts.</p>
                 </div>
               </div>
             )}
