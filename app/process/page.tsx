@@ -221,24 +221,11 @@ export default function ProcessPage() {
 
           const country = connection.location?.country;
           const name = `${connection.firstName ?? ""} ${connection.lastName ?? ""}`.trim();
-          const coords =
-            connection.location?.lat != null &&
-            connection.location?.lng != null
-              ? {
-                  lat: connection.location.lat,
-                  lng: connection.location.lng,
-                }
-              : null;
-
           const person: MapPerson = {
             name: name || "Unknown",
             url: connection.url ?? "",
             city: country ? `${city}, ${country}` : city,
           };
-
-          if (coords) {
-            person.coords = coords;
-          }
 
           return [person];
         });
