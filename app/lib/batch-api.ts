@@ -310,3 +310,93 @@ export async function downloadBatchResults(
     };
   }
 }
+
+/**
+ * Download batch results as raw JSONL text
+ */
+export async function downloadBatchResultsRaw(
+  outputFileId: string
+): Promise<{ success: boolean; data?: string; error?: string }> {
+  try {
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      return { success: false, error: "API key not found" };
+    }
+
+    const response = await fetch(
+      `${OPENAI_API_BASE}/files/${outputFileId}/content`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      return {
+        success: false,
+        error: `Download failed: ${JSON.stringify(error)}`,
+      };
+    }
+
+    const text = await response.text();
+    return { success: true, data: text };
+  } catch (error) {
+    console.error("Download error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Process batch results and merge with connections
+ */
+export async function processBatchWithConnections(
+  outputFileId: string
+): Promise<{
+  success: boolean;
+  data?: any;
+  stats?: any;
+  error?: string;
+}> {
+  try {
+    // Import the batch-results module dynamically to avoid circular dependencies
+    const { processBatchResults } = await import("./batch-results");
+
+    // 1. Get ZIP file
+    const blob = await getZipFileAsBlob();
+    if (!blob) {
+      return { success: false, error: "ZIP file not found" };
+    }
+
+    // 2. Extract Connections.csv
+    const csvText = await getLinkedInConnections(blob);
+    if (!csvText) {
+      return { success: false, error: "Connections.csv not found" };
+    }
+
+    // 3. Download batch results
+    const resultsResponse = await downloadBatchResultsRaw(outputFileId);
+    if (!resultsResponse.success || !resultsResponse.data) {
+      return {
+        success: false,
+        error: resultsResponse.error || "Failed to download results",
+      };
+    }
+
+    // 4. Process and merge
+    const result = await processBatchResults(csvText, resultsResponse.data);
+
+    return result;
+  } catch (error) {
+    console.error("Process batch error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}

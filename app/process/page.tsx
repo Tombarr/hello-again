@@ -14,6 +14,7 @@ import {
   createBatch,
   checkBatchStatus,
   downloadBatchResults,
+  processBatchWithConnections,
 } from "../lib/batch-api";
 import { hasZipFile, getApiKey } from "../lib/indexeddb";
 
@@ -195,6 +196,37 @@ export default function ProcessPage() {
     } catch (err) {
       console.error("Download error:", err);
       setError("Failed to download results");
+    }
+  };
+
+  const handleMergeAndLog = async (batch: StoredBatch) => {
+    if (!batch.outputFileId) {
+      setError("No output file available");
+      return;
+    }
+
+    try {
+      console.log("🔄 Starting merge process...");
+      const result = await processBatchWithConnections(batch.outputFileId);
+
+      if (result.success) {
+        console.log("✅ Successfully merged connections with batch results!");
+        console.log("\n📊 Statistics:");
+        console.log(result.stats);
+        console.log("\n📋 Enriched Connections Data:");
+        console.log(result.data);
+
+        setSuccess(
+          `Merged data logged to console! Check browser dev tools. ${result.stats?.enriched || 0} connections enriched.`
+        );
+        setTimeout(() => setSuccess(null), 5000);
+      } else {
+        console.error("❌ Merge failed:", result.error);
+        setError(result.error || "Failed to merge data");
+      }
+    } catch (err) {
+      console.error("❌ Merge error:", err);
+      setError("Failed to merge data");
     }
   };
 
@@ -398,12 +430,21 @@ export default function ProcessPage() {
 
                       <div className="flex gap-2">
                         {batch.status === "completed" && batch.outputFileId && (
-                          <button
-                            onClick={() => handleDownload(batch)}
-                            className="rounded-full border border-[#1d1c1a]/20 bg-[#1d1c1a] px-4 py-2 text-xs font-semibold text-[#f6f1ea] transition hover:bg-[#2b2926]"
-                          >
-                            Download
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleMergeAndLog(batch)}
+                              className="rounded-full border border-[#1d1c1a]/20 bg-[#7fd1c7] px-4 py-2 text-xs font-semibold text-[#1d1c1a] transition hover:bg-[#6dc1b7]"
+                              title="Merge with connections and log to console"
+                            >
+                              Merge & Log
+                            </button>
+                            <button
+                              onClick={() => handleDownload(batch)}
+                              className="rounded-full border border-[#1d1c1a]/20 bg-[#1d1c1a] px-4 py-2 text-xs font-semibold text-[#f6f1ea] transition hover:bg-[#2b2926]"
+                            >
+                              Download
+                            </button>
+                          </>
                         )}
 
                         <button

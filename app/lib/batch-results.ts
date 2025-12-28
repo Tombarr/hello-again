@@ -169,12 +169,13 @@ export function mergeConnectionsWithResults(
 
     if (result) {
       const { location, stats, error } = extractEnrichmentData(result);
-      enriched.location = location;
-      enriched.stats = stats;
+
+      // Only assign optional properties if they have values
+      if (location) enriched.location = location;
+      if (stats) enriched.stats = stats;
+      if (error) enriched.error = error;
+
       enriched.enriched = !error && (!!location || !!stats);
-      if (error) {
-        enriched.error = error;
-      }
     }
 
     return enriched;
