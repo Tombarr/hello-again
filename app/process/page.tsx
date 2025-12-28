@@ -45,6 +45,7 @@ export default function ProcessPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [mapPeople, setMapPeople] = useState<MapPerson[]>([]);
   const [isMapLoading, setIsMapLoading] = useState(false);
+  const [isMapFullWidth, setIsMapFullWidth] = useState(true);
 
   // Import batches state
   const [openAIBatches, setOpenAIBatches] = useState<Array<{
@@ -650,11 +651,39 @@ export default function ProcessPage() {
           </div>
         </section>
 
-        <section className="relative mx-auto max-w-6xl px-6 pb-20 sm:px-10 lg:px-16">
-          <LinkedInContactsMap
-            externalPeople={mapPeople}
-            externalLoading={isMapLoading}
-          />
+        <section
+          className={`relative mx-auto pb-20 ${
+            isMapFullWidth
+              ? "max-w-none px-0"
+              : "max-w-6xl px-6 sm:px-10 lg:px-16"
+          }`}
+        >
+          <div
+            className={`mb-4 flex justify-end ${
+              isMapFullWidth ? "px-20" : ""
+            }`}
+          >
+            <button
+              onClick={() => setIsMapFullWidth((value) => !value)}
+              className="rounded-full border border-[#1d1c1a]/20 bg-white/80 px-4 py-2 text-xs font-semibold text-[#1d1c1a] transition hover:bg-[#f6f1ea]"
+            >
+              {isMapFullWidth ? "Set normal width" : "Set full width"}
+            </button>
+          </div>
+
+          <div
+            className={
+              isMapFullWidth
+                ? "relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen px-20"
+                : ""
+            }
+          >
+            <LinkedInContactsMap
+              externalPeople={mapPeople}
+              externalLoading={isMapLoading}
+              fullBleed={isMapFullWidth}
+            />
+          </div>
         </section>
       </main>
     </div>
