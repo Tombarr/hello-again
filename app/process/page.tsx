@@ -227,6 +227,7 @@ export default function ProcessPage() {
             name: name || "Unknown",
             url: connection.url ?? "",
             city: country ? `${city}, ${country}` : city,
+            connectedOn: connection.connectedOn ?? "",
           };
 
           return [person];
