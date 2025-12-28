@@ -21,7 +21,9 @@
   ],
   "dependencies": {
     "fflate": "^0.8.2",
+    "mapbox-gl": "^3.17.0",
     "next": "16.1.1",
+    "papaparse": "^5.5.3",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },

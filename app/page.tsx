@@ -182,7 +182,7 @@ export default function Home() {
               </div>
               <div className="hidden rounded-3xl border border-[#1d1c1a]/10 bg-white/60 p-8 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.4)] backdrop-blur lg:flex lg:flex-1 lg:flex-col">
                 <h3 className={`${display.className} text-2xl`}>
-                  A little hello in motion
+                  Strengthen your connections
                 </h3>
                 <div className="mt-6 flex flex-1 items-center justify-center rounded-2xl border border-[#1d1c1a]/10 bg-white/80 p-6">
                   <svg
@@ -286,6 +286,7 @@ export default function Home() {
               <span>Local by design</span>
             </div>
           </section>
+
         </section>
       </main>
     </div>
