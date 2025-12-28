@@ -1,4 +1,5 @@
 import Image from "next/image";
+import UploadArea from "./components/UploadArea";
 import { Fraunces, Work_Sans } from "next/font/google";
 
 const display = Fraunces({
@@ -145,31 +146,29 @@ export default function Home() {
                   conversations and new friends!
                 </p>
               </div>
+              <section className="flex flex-col gap-6 rounded-[32px] border border-[#1d1c1a]/10 bg-white/80 p-10 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.4)] backdrop-blur sm:p-12">
+                <div className="flex flex-wrap items-center justify-between gap-6">
+                  <div>
+                    <h2 className={`${display.className} text-3xl`}>
+                      Ready to say hello again?
+                    </h2>
+                    <p className="mt-3 max-w-xl text-base text-[#4b4a45]">
+                      Start with your LinkedIn export. We’ll handle the rest and
+                      send you a fresh, local list in minutes.
+                    </p>
+                  </div>
+                  <div className="w-full max-w-md">
+                    <UploadArea />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-6 text-xs uppercase tracking-[0.3em] text-[#7b7872]">
+                  <span>Privacy-first</span>
+                  <span>Local by design</span>
+                </div>
+              </section>
             </div>
           </div>
 
-          <section className="flex flex-col gap-6 rounded-[32px] border border-[#1d1c1a]/10 bg-white/80 p-10 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.4)] backdrop-blur sm:p-12">
-            <div className="flex flex-wrap items-center justify-between gap-6">
-              <div>
-                <h2 className={`${display.className} text-3xl`}>
-                  Ready to say hello again?
-                </h2>
-                <p className="mt-3 max-w-xl text-base text-[#4b4a45]">
-                  Start with your LinkedIn export. We’ll handle the rest and
-                  send you a fresh, local list in minutes.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <button className="rounded-full bg-[#1d1c1a] px-7 py-3 text-sm font-semibold text-[#f6f1ea] transition hover:-translate-y-0.5 hover:bg-[#2b2926]">
-                  Upload your LinkedIn Zip file
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-6 text-xs uppercase tracking-[0.3em] text-[#7b7872]">
-              <span>Privacy-first</span>
-              <span>Local by design</span>
-            </div>
-          </section>
         </section>
       </main>
     </div>
