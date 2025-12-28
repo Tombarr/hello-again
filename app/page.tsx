@@ -175,7 +175,7 @@ export default function Home() {
                 </h3>
                 <p className="mt-4 text-sm leading-relaxed text-[#4b4a45]">
                   We turn a dusty LinkedIn archive into a living map of people
-                  you already know. Hello again shows you a map of all the
+                  you already know. Hello Again shows you a map of all the
                   people nearby you so you can start creating meaningful
                   conversations and new friends!
                 </p>
