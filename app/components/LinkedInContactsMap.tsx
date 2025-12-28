@@ -39,11 +39,13 @@ type CityGroups = Record<string, CityGroup>;
 type LinkedInContactsMapProps = {
   externalPeople?: MapPerson[];
   externalLoading?: boolean;
+  fullBleed?: boolean;
 };
 
 export default function LinkedInContactsMap({
   externalPeople,
   externalLoading = false,
+  fullBleed = false,
 }: LinkedInContactsMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -93,6 +95,27 @@ export default function LinkedInContactsMap({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!map.current) return;
+    const handleResize = () => {
+      map.current?.resize();
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!map.current) return;
+    const resizeFrame = requestAnimationFrame(() => {
+      map.current?.resize();
+    });
+    return () => cancelAnimationFrame(resizeFrame);
+  }, [fullBleed]);
 
   useEffect(() => {
     if (!map.current || !isMapLoaded) return;
@@ -253,13 +276,19 @@ export default function LinkedInContactsMap({
   };
 
   return (
-    <div className="linkedin-map">
+    <div className={`linkedin-map${fullBleed ? " full-bleed" : ""}`}>
       <style>{`
         .linkedin-map {
           border-radius: 28px;
           overflow: hidden;
           border: 1px solid rgba(29, 28, 26, 0.1);
           background: #ffffff;
+          box-shadow: 0 28px 60px -40px rgba(0, 0, 0, 0.45);
+        }
+
+        .linkedin-map.full-bleed {
+          border-radius: 28px;
+          border: 1px solid rgba(29, 28, 26, 0.1);
           box-shadow: 0 28px 60px -40px rgba(0, 0, 0, 0.45);
         }
 
