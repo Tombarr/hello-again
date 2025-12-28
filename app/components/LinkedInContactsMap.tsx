@@ -93,14 +93,16 @@ export default function LinkedInContactsMap({
 
   useEffect(() => {
     if (!map.current || !isMapLoaded) return;
-    renderMarkers();
-  }, [cityGroups, isMapLoaded, minConnections]);
+    renderMarkers(true);
+  }, [cityGroups, isMapLoaded]);
+
+  useEffect(() => {
+    if (!map.current || !isMapLoaded) return;
+    renderMarkers(false);
+  }, [minConnections, isMapLoaded]);
 
   const showStatus = (message: string, type: StatusType) => {
     setStatus({ message, type });
-    if (type === "success") {
-      setTimeout(() => setStatus({ message: "", type: "" }), 4000);
-    }
   };
 
   const geocodeCity = async (cityName: string) => {
@@ -185,7 +187,7 @@ export default function LinkedInContactsMap({
     void processPeopleList(externalPeople);
   }, [externalPeople]);
 
-  const renderMarkers = () => {
+  const renderMarkers = (shouldFitBounds: boolean) => {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
@@ -236,7 +238,7 @@ export default function LinkedInContactsMap({
       bounds.extend([coords.lng, coords.lat]);
     });
 
-    if (hasMarkers && map.current) {
+    if (hasMarkers && map.current && shouldFitBounds) {
       map.current.fitBounds(bounds, { padding: 80, maxZoom: 12 });
     }
   };
