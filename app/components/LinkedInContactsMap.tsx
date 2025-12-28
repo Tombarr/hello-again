@@ -36,10 +36,12 @@ type CityGroups = Record<string, CityGroup>;
 
 type LinkedInContactsMapProps = {
   externalPeople?: MapPerson[];
+  externalLoading?: boolean;
 };
 
 export default function LinkedInContactsMap({
   externalPeople,
+  externalLoading = false,
 }: LinkedInContactsMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -145,25 +147,26 @@ export default function LinkedInContactsMap({
     });
 
     const uniqueCities = Object.entries(groups);
-    let geocoded = 0;
+    const citiesToGeocode = uniqueCities.filter(
+      ([cityKey, group]) => !group.coords && !geocodeCacheRef.current[cityKey],
+    );
+
+    if (citiesToGeocode.length > 0) {
+      setLoadingText(`Geocoding ${citiesToGeocode.length} cities...`);
+      await Promise.all(
+        citiesToGeocode.map(async ([cityKey, group]) => {
+          const coords = await geocodeCity(group.city);
+          if (coords) {
+            geocodeCacheRef.current[cityKey] = coords;
+          }
+        }),
+      );
+    }
 
     for (const [cityKey, group] of uniqueCities) {
-      const cityName = group.city;
-
-      if (!group.coords && !geocodeCacheRef.current[cityKey]) {
-        const coords = await geocodeCity(cityName);
-        if (coords) {
-          geocodeCacheRef.current[cityKey] = coords;
-        }
-      }
-
       if (geocodeCacheRef.current[cityKey] && !group.coords) {
         group.coords = geocodeCacheRef.current[cityKey];
       }
-
-      geocoded += 1;
-      setLoadingText(`Geocoding ${geocoded}/${uniqueCities.length} cities...`);
-      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     setCityGroups(groups);
@@ -702,10 +705,10 @@ export default function LinkedInContactsMap({
               </div>
             )}
 
-            {isLoading && (
+            {(isLoading || externalLoading) && (
               <div className="loading-overlay">
                 <div className="spinner" />
-                <p>{loadingText}</p>
+                <p>{externalLoading ? "Loading batch results..." : loadingText}</p>
               </div>
             )}
           </div>
