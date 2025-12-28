@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Fraunces, Work_Sans } from "next/font/google";
+import LinkedInContactsMap from "../components/LinkedInContactsMap";
 import { getUserProfile, type LinkedInProfile } from "../lib/profile-utils";
 import {
   getAllBatches,
@@ -468,6 +469,10 @@ export default function ProcessPage() {
                 ))}
               </div>
             )}
+
+            <div className="mt-8">
+              <LinkedInContactsMap />
+            </div>
           </div>
         </section>
       </main>

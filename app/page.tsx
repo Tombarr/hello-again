@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ApiKeyInput from "./components/ApiKeyInput";
 import UploadArea from "./components/UploadArea";
-import LinkedInContactsMap from "./components/LinkedInContactsMap";
 import { hasZipFile } from "./lib/indexeddb";
 import { Fraunces, Work_Sans } from "next/font/google";
 
@@ -288,9 +287,6 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="flex flex-col gap-6">
-            <LinkedInContactsMap />
-          </section>
         </section>
       </main>
     </div>
