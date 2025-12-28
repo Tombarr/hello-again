@@ -81,6 +81,7 @@ export default function UploadArea() {
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const file = files[0];
+    if (!file) return;
     setFileName(file.name);
     void storeFile(file);
   };

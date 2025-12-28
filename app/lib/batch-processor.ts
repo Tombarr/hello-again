@@ -105,25 +105,32 @@ export function parseConnectionsCSV(csvText: string): Array<{
   // Find header line (skip notes at the top)
   let headerIndex = 0;
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("First Name")) {
+    const line = lines[i];
+    if (line && line.includes("First Name")) {
       headerIndex = i;
       break;
     }
   }
 
-  const headers = parseCSVLine(lines[headerIndex]);
+  const headerLine = lines[headerIndex];
+  if (!headerLine) {
+    return [];
+  }
+
+  const headers = parseCSVLine(headerLine);
   const connections = [];
 
   // Parse data rows
   for (let i = headerIndex + 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
+    const line = lines[i];
+    if (!line || !line.trim()) continue;
 
-    const values = parseCSVLine(line);
+    const values = parseCSVLine(line.trim());
     if (values.length === headers.length) {
       const connection: Record<string, string> = {};
       headers.forEach((header, index) => {
-        connection[toCamelCase(header)] = values[index];
+        const value = values[index];
+        connection[toCamelCase(header)] = value || "";
       });
       connections.push(connection);
     }
@@ -245,10 +252,20 @@ export async function previewConnections(
   }
 
   const connections = parseConnectionsCSV(result.data);
-  return connections.slice(0, limit).map((conn) => ({
-    firstName: conn.firstName,
-    lastName: conn.lastName,
-    company: conn.company,
-    position: conn.position,
-  }));
+  return connections.slice(0, limit).map((conn) => {
+    const preview: {
+      firstName: string;
+      lastName: string;
+      company?: string;
+      position?: string;
+    } = {
+      firstName: conn.firstName,
+      lastName: conn.lastName,
+    };
+
+    if (conn.company) preview.company = conn.company;
+    if (conn.position) preview.position = conn.position;
+
+    return preview;
+  });
 }

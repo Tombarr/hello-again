@@ -71,7 +71,8 @@ export async function getZipFileByName(
     return null;
   }
 
-  return new Blob([data]);
+  // Convert Uint8Array to Blob
+  return new Blob([new Uint8Array(data)]);
 }
 
 /**
@@ -141,7 +142,7 @@ export async function extractZipFiles(
     const data = unzipped[filename];
 
     if (data && !filename.endsWith("/")) {
-      results.set(filename, new Blob([data]));
+      results.set(filename, new Blob([new Uint8Array(data)]));
     }
   }
 
@@ -157,7 +158,7 @@ export async function extractAllFiles(blob: Blob): Promise<Map<string, Blob>> {
 
   for (const [filename, data] of Object.entries(unzipped)) {
     if (!filename.endsWith("/")) {
-      results.set(filename, new Blob([data]));
+      results.set(filename, new Blob([new Uint8Array(data)]));
     }
   }
 
