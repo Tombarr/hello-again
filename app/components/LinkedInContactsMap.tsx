@@ -214,8 +214,8 @@ export default function LinkedInContactsMap({
 
       el.textContent = count > 999 ? "999+" : String(count);
       el.title = `${group.city}: ${count} contacts`;
-      // Ensure larger clusters render above smaller ones
-      el.style.zIndex = String(1000 + count);
+      // Ensure larger clusters render above smaller ones without eclipsing the sidebar
+      el.style.zIndex = String(10 + count);
 
       el.addEventListener("click", () => {
         setSelectedCity(group);
@@ -459,6 +459,7 @@ export default function LinkedInContactsMap({
         .linkedin-map .map-container {
           flex: 1;
           position: relative;
+          z-index: 0;
         }
 
         .linkedin-map .map-container > div:first-child {
