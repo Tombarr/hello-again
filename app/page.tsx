@@ -53,8 +53,8 @@ export default function Home() {
                 The Process
               </h2>
               <ol className="mt-6 space-y-5 text-base text-[#3c3b37]">
-                <li className="flex items-start gap-4">
-                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f59e8b]/30 text-sm font-semibold">
+                <li className="grid grid-cols-[2.5rem_1fr] items-center gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f59e8b]/30 text-sm font-semibold">
                     1
                   </span>
                   <span>
@@ -70,7 +70,7 @@ export default function Home() {
                     .
                   </span>
                 </li>
-                <li className="flex items-start gap-4">
+                <li className="grid grid-cols-[2.5rem_1fr] items-start gap-4">
                   <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7fd1c7]/30 text-sm font-semibold">
                     2
                   </span>
@@ -90,14 +90,14 @@ export default function Home() {
                     </div>
                   </div>
                 </li>
-                <li className="flex items-start gap-4">
-                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffb86c]/30 text-sm font-semibold">
+                <li className="grid grid-cols-[2.5rem_1fr] items-center gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffb86c]/30 text-sm font-semibold">
                     3
                   </span>
                   <span>Click “Request new archive”.</span>
                 </li>
-                <li className="flex items-start gap-4">
-                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f59e8b]/30 text-sm font-semibold">
+                <li className="grid grid-cols-[2.5rem_1fr] items-center gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f59e8b]/30 text-sm font-semibold">
                     4
                   </span>
                   <span>
@@ -105,14 +105,14 @@ export default function Home() {
                     data archive is ready!”
                   </span>
                 </li>
-                <li className="flex items-start gap-4">
-                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7fd1c7]/30 text-sm font-semibold">
+                <li className="grid grid-cols-[2.5rem_1fr] items-center gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7fd1c7]/30 text-sm font-semibold">
                     5
                   </span>
                   <span>Download the ZIP file of your LinkedIn data.</span>
                 </li>
-                <li className="flex items-start gap-4">
-                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f59e8b]/30 text-sm font-semibold">
+                <li className="grid grid-cols-[2.5rem_1fr] items-center gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f59e8b]/30 text-sm font-semibold">
                     6
                   </span>
                   <span>
