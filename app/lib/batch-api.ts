@@ -21,7 +21,7 @@ function generatePrompt(person: {
   company?: string;
   position?: string;
 }): string {
-  return `${person.firstName} ${person.lastName} at ${person.company || "Unknown"} (${person.position || "Unknown"}). Infer: location (city, country, lat/lng), LinkedIn stats (connections/followers). Use null if unknown.`;
+  return `${person.firstName} ${person.lastName} at ${person.company || "Unknown"} (${person.position || "Unknown"}). Infer PERSON'S likely location (not company HQ): city, ISO 3166-1 alpha-2 country code (e.g. US, GB, FR), coordinates. Estimate LinkedIn connections/followers. Use null if uncertain.`;
 }
 
 /**
@@ -77,7 +77,7 @@ function generateBatchJSONL(
         messages: [
           {
             role: "system",
-            content: "Return location and stats in JSON. Infer if needed.",
+            content: "Return person's location and stats in JSON. Use ISO 3166-1 alpha-2 country codes (US not USA). Infer based on name/company if needed.",
           },
           {
             role: "user",

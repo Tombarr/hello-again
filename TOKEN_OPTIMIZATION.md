@@ -41,19 +41,21 @@ specified JSON structure, making reasonable inferences where appropriate.
 
 ### New System (Optimized)
 
-**Prompt per connection:** ~40 tokens
+**Prompt per connection:** ~45 tokens
 ```
-John Doe at Acme Corp (Software Engineer). Infer: location (city, country,
-lat/lng), LinkedIn stats (connections/followers). Use null if unknown.
+John Doe at Acme Corp (Software Engineer). Infer PERSON'S likely location
+(not company HQ): city, ISO 3166-1 alpha-2 country code (e.g. US, GB, FR),
+coordinates. Estimate LinkedIn connections/followers. Use null if uncertain.
 ```
 
 **Schema:** 6 fields only
-- `loc` with city, country, lat, lng
+- `loc` with city, country (ISO alpha-2), lat, lng
 - `stats` with conn, foll
 
-**System message:** 9 tokens
+**System message:** 20 tokens
 ```
-Return location and stats in JSON. Infer if needed.
+Return person's location and stats in JSON. Use ISO 3166-1 alpha-2 country
+codes (US not USA). Infer based on name/company if needed.
 ```
 
 **Custom ID:** Shortened from `request-1-John-Doe` to `req-1`
