@@ -241,6 +241,8 @@ export default function ProcessPage() {
             name: name || "Unknown",
             url: connection.url ?? "",
             city: country ? `${city}, ${country}` : city,
+            company: connection.company ?? "",
+            position: connection.position ?? "",
             connectedOn: connection.connectedOn ?? "",
           };
 

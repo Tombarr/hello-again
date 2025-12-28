@@ -17,6 +17,8 @@ export type MapPerson = {
   name: string;
   url: string;
   city: string;
+  company?: string;
+  position?: string;
   connectedOn?: string;
 };
 
@@ -467,6 +469,18 @@ export default function LinkedInContactsMap({
           margin-bottom: 8px;
         }
 
+        .linkedin-map .person-role {
+          font-size: 0.85rem;
+          color: #475569;
+          margin-bottom: 10px;
+        }
+
+        .linkedin-map .person-connected {
+          font-size: 0.75rem;
+          color: #94a3b8;
+          margin-bottom: 10px;
+        }
+
         .linkedin-map .person-link {
           display: inline-flex;
           align-items: center;
@@ -718,34 +732,46 @@ export default function LinkedInContactsMap({
 
                 return peopleToShow.map((person, idx) => (
                   <div key={`${person.name}-${idx}`} className="person-card">
-                  <div className="person-name">{person.name}</div>
-                  {person.url ? (
-                    <a
-                      href={person.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="person-link"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                    <div className="person-name">{person.name}</div>
+                    {(person.position || person.company) && (
+                      <div className="person-role">
+                        {person.position || "Unknown role"}
+                        {person.company ? ` · ${person.company}` : ""}
+                      </div>
+                    )}
+                    {person.connectedOn && (
+                      <div className="person-connected">
+                        Connected on{" "}
+                        {new Date(person.connectedOn).toLocaleDateString()}
+                      </div>
+                    )}
+                    {person.url ? (
+                      <a
+                        href={person.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="person-link"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                      View Profile
-                    </a>
-                  ) : (
-                    <span className="no-url">No profile URL</span>
-                  )}
-                </div>
+                        <svg
+                          width="14"
+                          height="14"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                        View Profile
+                      </a>
+                    ) : (
+                      <span className="no-url">No profile URL</span>
+                    )}
+                  </div>
                 ));
               })()}
             </div>
