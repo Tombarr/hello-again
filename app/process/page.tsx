@@ -6,8 +6,9 @@ import { Fraunces, Work_Sans } from "next/font/google";
 import LinkedInContactsMap, {
   type MapPerson,
 } from "../components/LinkedInContactsMap";
+import LinkedInProfileImage from "../components/LinkedInProfileImage";
 import type { EnrichedConnection } from "../lib/batch-results";
-import { getUserProfile, type LinkedInProfile } from "../lib/profile-utils";
+import { getUserProfile, getUserLinkedInUrl, type LinkedInProfile } from "../lib/profile-utils";
 import {
   getAllBatches,
   getPendingBatches,
@@ -37,6 +38,7 @@ const body = Work_Sans({
 export default function ProcessPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<LinkedInProfile | null>(null);
+  const [userLinkedInUrl, setUserLinkedInUrl] = useState<string | null>(null);
   const [batches, setBatches] = useState<StoredBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -74,6 +76,12 @@ export default function ProcessPage() {
         const userProfile = await getUserProfile();
         if (isMounted) {
           setProfile(userProfile);
+        }
+
+        // Load user's LinkedIn URL from Invitations.csv
+        const linkedInUrl = await getUserLinkedInUrl();
+        if (isMounted) {
+          setUserLinkedInUrl(linkedInUrl);
         }
 
         // Load batches
@@ -421,12 +429,24 @@ export default function ProcessPage() {
                 <p className="text-sm uppercase tracking-[0.2em] text-[#7b7872]">
                   Your Profile
                 </p>
-                <p className="mt-2 text-lg font-semibold text-[#1d1c1a]">
-                  {profile.firstName} {profile.lastName}
-                </p>
-                {profile.headline && (
-                  <p className="mt-1 text-sm text-[#4b4a45]">{profile.headline}</p>
-                )}
+                <div className="mt-4 flex items-center gap-4">
+                  {userLinkedInUrl && (
+                    <LinkedInProfileImage
+                      profileUrl={userLinkedInUrl}
+                      alt={`${profile.firstName} ${profile.lastName}`}
+                      size={64}
+                      className="flex-shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-semibold text-[#1d1c1a]">
+                      {profile.firstName} {profile.lastName}
+                    </p>
+                    {profile.headline && (
+                      <p className="mt-1 text-sm text-[#4b4a45]">{profile.headline}</p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </header>

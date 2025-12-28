@@ -186,3 +186,118 @@ export async function getUserDisplayName(): Promise<string> {
 
   return profile.firstName || profile.lastName || "Friend";
 }
+
+/**
+ * Extract Invitations.csv from the uploaded ZIP file
+ */
+export async function getLinkedInInvitations(
+  blob: Blob
+): Promise<string | null> {
+  // Try common locations for Invitations.csv in LinkedIn exports
+  const possiblePaths = [
+    "Invitations.csv",
+    "invitations.csv",
+    "data/Invitations.csv",
+    "Data/Invitations.csv",
+  ];
+
+  for (const path of possiblePaths) {
+    const content = await getZipFileAsText(blob, path);
+    if (content) {
+      return content;
+    }
+  }
+
+  // Search for any file named Invitations.csv
+  try {
+    const { findZipFiles } = await import("./zip-utils");
+    const files = await findZipFiles(blob, "**/Invitations.csv");
+    if (files.length > 0 && files[0]) {
+      return await getZipFileAsText(blob, files[0].filename);
+    }
+  } catch (error) {
+    console.error("Failed to search for Invitations.csv:", error);
+  }
+
+  return null;
+}
+
+/**
+ * Get user's LinkedIn profile URL from Invitations.csv
+ * Finds the first invitation where the user is either inviter or invitee
+ */
+export async function getUserLinkedInUrl(): Promise<string | null> {
+  try {
+    const blob = await getZipFileAsBlob();
+    if (!blob) {
+      console.error("No ZIP file found");
+      return null;
+    }
+
+    // Get user's name from profile
+    const profile = await getUserProfile();
+    if (!profile) {
+      console.error("Profile not found");
+      return null;
+    }
+
+    const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+
+    // Get Invitations.csv
+    const invitationsCSV = await getLinkedInInvitations(blob);
+    if (!invitationsCSV) {
+      console.error("Invitations.csv not found in ZIP");
+      return null;
+    }
+
+    // Parse CSV
+    const lines = invitationsCSV.split("\n").filter((line) => line.trim());
+    if (lines.length < 2) {
+      return null; // Need at least header and one data row
+    }
+
+    // Parse header
+    const headerLine = lines[0];
+    if (!headerLine) return null;
+    const headers = parseCSVLine(headerLine);
+
+    // Find column indices
+    const fromIndex = headers.indexOf("From");
+    const toIndex = headers.indexOf("To");
+    const inviterUrlIndex = headers.indexOf("inviterProfileUrl");
+    const inviteeUrlIndex = headers.indexOf("inviteeProfileUrl");
+
+    if (
+      fromIndex === -1 ||
+      toIndex === -1 ||
+      inviterUrlIndex === -1 ||
+      inviteeUrlIndex === -1
+    ) {
+      console.error("Missing required columns in Invitations.csv");
+      return null;
+    }
+
+    // Find first invitation with user's name
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+
+      const values = parseCSVLine(line);
+
+      const from = values[fromIndex] || "";
+      const to = values[toIndex] || "";
+
+      // Check if user's name matches
+      if (from === fullName) {
+        return values[inviterUrlIndex] || null;
+      } else if (to === fullName) {
+        return values[inviteeUrlIndex] || null;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Failed to get user LinkedIn URL:", error);
+    return null;
+  }
+}
