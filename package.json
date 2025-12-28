@@ -1,0 +1,29 @@
+{
+  "name": "linkedin-batch-processor",
+  "version": "1.0.0",
+  "description": "Process LinkedIn connections CSV exports and generate OpenAI Batch API requests",
+  "main": "dist/linkedin-batch-processor.js",
+  "types": "dist/linkedin-batch-processor.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "linkedin",
+    "openai",
+    "batch-api",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}
