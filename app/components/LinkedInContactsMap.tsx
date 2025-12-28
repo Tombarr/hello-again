@@ -54,6 +54,7 @@ export default function LinkedInContactsMap({
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   const [hasData, setHasData] = useState(false);
+  const [minConnections, setMinConnections] = useState(1);
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
@@ -91,7 +92,7 @@ export default function LinkedInContactsMap({
   useEffect(() => {
     if (!map.current || !isMapLoaded) return;
     renderMarkers();
-  }, [cityGroups, isMapLoaded]);
+  }, [cityGroups, isMapLoaded, minConnections]);
 
   const showStatus = (message: string, type: StatusType) => {
     setStatus({ message, type });
@@ -189,6 +190,7 @@ export default function LinkedInContactsMap({
     let hasMarkers = false;
 
     Object.values(cityGroups).forEach((group) => {
+      if (group.people.length < minConnections) return;
       if (!group.coords || !map.current) return;
 
       hasMarkers = true;
@@ -285,24 +287,31 @@ export default function LinkedInContactsMap({
           margin-right: auto;
         }
 
-        .linkedin-map .upload-btn {
-          background: white;
-          color: #0077b5;
-          border: none;
-          padding: 10px 20px;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
+        .linkedin-map .filter-control {
+          display: inline-flex;
           align-items: center;
-          gap: 8px;
-          font-size: 0.95rem;
+          gap: 10px;
+          font-size: 0.9rem;
+          color: #f8fafc;
+          background: rgba(255, 255, 255, 0.18);
+          border-radius: 999px;
+          padding: 8px 14px;
+          border: 1px solid rgba(255, 255, 255, 0.25);
         }
 
-        .linkedin-map .upload-btn:hover {
-          background: #f0f9ff;
-          transform: translateY(-1px);
+        .linkedin-map .filter-control input {
+          width: 72px;
+          border: none;
+          border-radius: 999px;
+          padding: 4px 10px;
+          font-size: 0.9rem;
+          color: #0f172a;
+          background: #ffffff;
+        }
+
+        .linkedin-map .filter-control input:focus {
+          outline: 2px solid rgba(255, 255, 255, 0.6);
+          outline-offset: 2px;
         }
 
         .linkedin-map .status-badge {
@@ -601,6 +610,22 @@ export default function LinkedInContactsMap({
       <div className="app-container">
         <header className="header">
           <h1>📍 LinkedIn Contacts Map</h1>
+
+          <label className="filter-control" htmlFor="min-connections">
+            Min connections:
+            <input
+              id="min-connections"
+              type="number"
+              min={1}
+              value={minConnections}
+              onChange={(event) => {
+                const value = Number(event.target.value);
+                setMinConnections(
+                  Number.isFinite(value) && value > 0 ? value : 1,
+                );
+              }}
+            />
+          </label>
 
           {status.message && (
             <span className={`status-badge ${status.type}`}>
