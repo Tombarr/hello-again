@@ -17,7 +17,6 @@ export type MapPerson = {
   name: string;
   url: string;
   city: string;
-  coords?: CityCoords;
 };
 
 type CityGroup = {
@@ -142,9 +141,6 @@ export default function LinkedInContactsMap({
         };
       }
       groups[cityKey].people.push(person);
-      if (person.coords && !groups[cityKey].coords) {
-        groups[cityKey].coords = person.coords;
-      }
     });
 
     const uniqueCities = Object.entries(groups);
@@ -213,6 +209,8 @@ export default function LinkedInContactsMap({
 
       el.textContent = count > 999 ? "999+" : String(count);
       el.title = `${group.city}: ${count} contacts`;
+      // Ensure larger clusters render above smaller ones
+      el.style.zIndex = String(1000 + count);
 
       el.addEventListener("click", () => {
         setSelectedCity(group);
