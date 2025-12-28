@@ -400,3 +400,118 @@ export async function processBatchWithConnections(
     };
   }
 }
+
+/**
+ * List all batches from OpenAI
+ */
+export async function listOpenAIBatches(): Promise<{
+  success: boolean;
+  batches?: Array<{
+    id: string;
+    status: string;
+    created_at: number;
+    input_file_id: string;
+    output_file_id?: string;
+    error_file_id?: string;
+    request_counts?: {
+      total: number;
+      completed: number;
+      failed: number;
+    };
+    metadata?: Record<string, string>;
+  }>;
+  error?: string;
+}> {
+  try {
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      return { success: false, error: "API key not found" };
+    }
+
+    const response = await fetch(`${OPENAI_API_BASE}/batches?limit=100`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      return {
+        success: false,
+        error: `Failed to list batches: ${JSON.stringify(error)}`,
+      };
+    }
+
+    const data = await response.json();
+    return { success: true, batches: data.data || [] };
+  } catch (error) {
+    console.error("List batches error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Import an existing batch from OpenAI into local storage
+ */
+export async function importBatch(
+  batchId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Check batch status to get latest info
+    const statusResult = await checkBatchStatus(batchId);
+
+    if (!statusResult.success || !statusResult.status) {
+      return {
+        success: false,
+        error: statusResult.error || "Failed to fetch batch status",
+      };
+    }
+
+    const batchData = statusResult.status;
+
+    // Create StoredBatch object
+    const storedBatch: StoredBatch = {
+      batchId: batchData.id,
+      createdAt: batchData.created_at * 1000, // Convert to milliseconds
+      status: batchData.status,
+      fileId: batchData.input_file_id,
+    };
+
+    // Add optional properties only if they exist
+    if (batchData.output_file_id) {
+      storedBatch.outputFileId = batchData.output_file_id;
+    }
+    if (batchData.error_file_id) {
+      storedBatch.errorFileId = batchData.error_file_id;
+    }
+    if (batchData.request_counts) {
+      storedBatch.requestCounts = batchData.request_counts;
+    }
+    if (batchData.metadata) {
+      storedBatch.metadata = {
+        connectionsCount: parseInt(
+          batchData.metadata.processed_connections || "0",
+          10
+        ),
+      };
+      if (batchData.metadata.description) {
+        storedBatch.metadata.description = batchData.metadata.description;
+      }
+    }
+
+    // Add to IndexedDB (will update if already exists)
+    await addBatch(storedBatch);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Import batch error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}

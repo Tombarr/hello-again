@@ -19,6 +19,8 @@ import {
   checkBatchStatus,
   downloadBatchResults,
   processBatchWithConnections,
+  listOpenAIBatches,
+  importBatch,
 } from "../lib/batch-api";
 import { hasZipFile, getApiKey } from "../lib/indexeddb";
 
@@ -42,6 +44,17 @@ export default function ProcessPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [mapPeople, setMapPeople] = useState<MapPerson[]>([]);
+
+  // Import batches state
+  const [openAIBatches, setOpenAIBatches] = useState<Array<{
+    id: string;
+    status: string;
+    created_at: number;
+    alreadyImported: boolean;
+  }>>([]);
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("");
+  const [isLoadingBatches, setIsLoadingBatches] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Load profile and batches
   useEffect(() => {
@@ -262,6 +275,82 @@ export default function ProcessPage() {
     }
   };
 
+  const handleLoadOpenAIBatches = async () => {
+    setIsLoadingBatches(true);
+    setError(null);
+
+    try {
+      const result = await listOpenAIBatches();
+
+      if (result.success && result.batches) {
+        // Get current local batches
+        const localBatches = await getAllBatches();
+        const localBatchIds = new Set(localBatches.map((b) => b.batchId));
+
+        // Mark which batches are already imported
+        const batchesWithImportStatus = result.batches.map((batch) => ({
+          id: batch.id,
+          status: batch.status,
+          created_at: batch.created_at,
+          alreadyImported: localBatchIds.has(batch.id),
+        }));
+
+        setOpenAIBatches(batchesWithImportStatus);
+        setSuccess(
+          `Loaded ${batchesWithImportStatus.length} batches from OpenAI`
+        );
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(result.error || "Failed to load batches");
+      }
+    } catch (err) {
+      console.error("Load batches error:", err);
+      setError("Failed to load batches from OpenAI");
+    } finally {
+      setIsLoadingBatches(false);
+    }
+  };
+
+  const handleImportBatch = async () => {
+    if (!selectedBatchId) {
+      setError("Please select a batch to import");
+      return;
+    }
+
+    setIsImporting(true);
+    setError(null);
+
+    try {
+      const result = await importBatch(selectedBatchId);
+
+      if (result.success) {
+        // Refresh local batches
+        const allBatches = await getAllBatches();
+        setBatches(allBatches);
+
+        // Update OpenAI batches to mark as imported
+        setOpenAIBatches((prev) =>
+          prev.map((batch) =>
+            batch.id === selectedBatchId
+              ? { ...batch, alreadyImported: true }
+              : batch
+          )
+        );
+
+        setSuccess("Batch imported successfully");
+        setSelectedBatchId(""); // Clear selection
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        setError(result.error || "Failed to import batch");
+      }
+    } catch (err) {
+      console.error("Import batch error:", err);
+      setError("Failed to import batch");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const getDisplayName = () => {
     if (profile?.firstName) {
       return profile.firstName;
@@ -392,6 +481,75 @@ export default function ProcessPage() {
                   "Create Batch"
                 )}
               </button>
+            </div>
+          </div>
+
+          {/* Import Existing Batch */}
+          <div className="mb-8 rounded-3xl border border-[#1d1c1a]/10 bg-white/80 p-8 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.4)] backdrop-blur">
+            <h2 className={`${display.className} text-2xl`}>
+              Import Existing Batch
+            </h2>
+            <p className="mt-2 text-sm text-[#4b4a45]">
+              Load and import batches created previously on OpenAI
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <button
+                onClick={handleLoadOpenAIBatches}
+                disabled={isLoadingBatches}
+                className="w-full rounded-full border border-[#1d1c1a]/20 bg-white px-6 py-3 text-sm font-semibold text-[#1d1c1a] transition hover:bg-[#f6f1ea] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isLoadingBatches ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#1d1c1a]/20 border-t-[#1d1c1a]" />
+                    Loading OpenAI Batches...
+                  </span>
+                ) : (
+                  "Load OpenAI Batches"
+                )}
+              </button>
+
+              {openAIBatches.length > 0 && (
+                <div className="flex gap-3">
+                  <select
+                    value={selectedBatchId}
+                    onChange={(e) => setSelectedBatchId(e.target.value)}
+                    className="flex-1 rounded-lg border border-[#1d1c1a]/20 bg-white px-4 py-3 text-sm text-[#1d1c1a] focus:border-[#1d1c1a] focus:outline-none focus:ring-1 focus:ring-[#1d1c1a]"
+                  >
+                    <option value="">Select a batch to import...</option>
+                    {openAIBatches.map((batch) => (
+                      <option key={batch.id} value={batch.id}>
+                        {batch.id.slice(0, 20)}... ({batch.status}) -{" "}
+                        {new Date(batch.created_at * 1000).toLocaleDateString()}
+                        {batch.alreadyImported ? " [Already Imported]" : ""}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={handleImportBatch}
+                    disabled={!selectedBatchId || isImporting}
+                    className="rounded-full bg-[#1d1c1a] px-6 py-3 text-sm font-semibold text-[#f6f1ea] transition hover:bg-[#2b2926] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isImporting ? (
+                      <span className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#f6f1ea]/20 border-t-[#f6f1ea]" />
+                        Importing...
+                      </span>
+                    ) : (
+                      "Import Batch"
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {openAIBatches.length > 0 && (
+                <p className="text-xs text-[#7b7872]">
+                  Found {openAIBatches.length} batches on OpenAI.{" "}
+                  {openAIBatches.filter((b) => b.alreadyImported).length}{" "}
+                  already imported.
+                </p>
+              )}
             </div>
           </div>
 
