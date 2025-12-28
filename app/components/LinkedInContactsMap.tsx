@@ -18,6 +18,7 @@ export type MapPerson = {
   url: string;
   city: string;
   connectedOn?: string;
+  chatCount?: number;
 };
 
 type CityGroup = {
@@ -53,7 +54,9 @@ export default function LinkedInContactsMap({
   const [cityGroups, setCityGroups] = useState<CityGroups>({});
   const [selectedCity, setSelectedCity] = useState<CityGroup | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "chat">(
+    "newest",
+  );
   const [status, setStatus] = useState<Status>({ message: "", type: "" });
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("");
@@ -657,7 +660,13 @@ export default function LinkedInContactsMap({
                     id="sort-order"
                     value={sortOrder}
                     onChange={(e) =>
-                      setSortOrder(e.target.value === "oldest" ? "oldest" : "newest")
+                      setSortOrder(
+                        e.target.value === "chat"
+                          ? "chat"
+                          : e.target.value === "oldest"
+                          ? "oldest"
+                          : "newest",
+                      )
                     }
                     style={{
                       borderRadius: 6,
@@ -668,6 +677,7 @@ export default function LinkedInContactsMap({
                   >
                     <option value="newest">Latest</option>
                     <option value="oldest">Oldest</option>
+                    <option value="chat">Most interactions</option>
                   </select>
                 </div>
               </div>
@@ -679,6 +689,13 @@ export default function LinkedInContactsMap({
               {(() => {
                 const peopleToShow = selectedCity
                   ? [...selectedCity.people].sort((a, b) => {
+                      if (sortOrder === "chat") {
+                        const ca = a.chatCount ?? 0;
+                        const cb = b.chatCount ?? 0;
+                        if (cb !== ca) return cb - ca;
+                        // tie-break by most recent connection
+                      }
+
                       const ta = a.connectedOn ? new Date(a.connectedOn).getTime() : 0;
                       const tb = b.connectedOn ? new Date(b.connectedOn).getTime() : 0;
                       return sortOrder === "newest" ? tb - ta : ta - tb;

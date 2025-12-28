@@ -20,7 +20,8 @@ import {
   downloadBatchResults,
   processBatchWithConnections,
 } from "../lib/batch-api";
-import { hasZipFile, getApiKey } from "../lib/indexeddb";
+import { hasZipFile, getApiKey, getZipFileAsBlob } from "../lib/indexeddb";
+import { findZipFiles, getZipFileAsText } from "../lib/zip-utils";
 
 const display = Fraunces({
   subsets: ["latin"],
@@ -213,6 +214,56 @@ export default function ProcessPage() {
 
     try {
       setIsMapLoading(true);
+
+      // Compute message counts from messages.csv in the stored ZIP (if present)
+      let messageCounts = new Map<string, number>();
+      try {
+        const zipBlob = await getZipFileAsBlob();
+        if (zipBlob) {
+          // Try common filenames
+          let candidates = await findZipFiles(zipBlob, "*messages*.csv");
+          let filename =
+            candidates && candidates.length > 0 ? candidates[0].filename : undefined;
+
+          if (!filename) {
+            candidates = await findZipFiles(zipBlob, "*message*.csv");
+            filename = candidates && candidates.length > 0 ? candidates[0].filename : undefined;
+          }
+
+          if (filename) {
+            const csvText = await getZipFileAsText(zipBlob, filename);
+            if (csvText) {
+              const buildMessageCountsFromCsv = (csv: string) => {
+                const lines = csv.split(/\r?\n/).filter(Boolean);
+                if (lines.length === 0) return new Map<string, number>();
+                const headerCols = lines[0]
+                  .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+                  .map((h) => h.trim().toLowerCase());
+                const urlIdx = headerCols.findIndex((h) => /url|profile/.test(h));
+                if (urlIdx === -1) return new Map<string, number>();
+
+                const counts = new Map<string, number>();
+                for (let i = 1; i < lines.length; i++) {
+                  const cols = lines[i]
+                    .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+                    .map((c) => c.trim().replace(/^"|"$/g, ""));
+                  const url = cols[urlIdx];
+                  if (!url) continue;
+                  const normalized = url.split("?")[0].replace(/\/$/, "");
+                  counts.set(normalized, (counts.get(normalized) || 0) + 1);
+                }
+                return counts;
+              };
+
+              messageCounts = buildMessageCountsFromCsv(csvText);
+            }
+          }
+        }
+      } catch (err) {
+        // Non-fatal: continue without chat counts if parsing fails
+        console.warn("Failed to build message counts:", err);
+      }
+
       const result = await processBatchWithConnections(batch.outputFileId);
 
       if (result.success && Array.isArray(result.data)) {
@@ -223,20 +274,22 @@ export default function ProcessPage() {
 
           const country = connection.location?.country;
           const name = `${connection.firstName ?? ""} ${connection.lastName ?? ""}`.trim();
+          const profileUrl = (connection.url ?? "").split("?")[0].replace(/\/$/, "");
+          const chatCount = messageCounts.get(profileUrl) ?? 0;
+
           const person: MapPerson = {
             name: name || "Unknown",
             url: connection.url ?? "",
             city: country ? `${city}, ${country}` : city,
             connectedOn: connection.connectedOn ?? "",
+            chatCount,
           };
 
           return [person];
         });
 
         setMapPeople(people);
-        setSuccess(
-          `Loaded ${people.length} connections into the map.`
-        );
+        setSuccess(`Loaded ${people.length} connections into the map.`);
         setTimeout(() => setSuccess(null), 5000);
       } else {
         console.error("❌ Merge failed:", result.error);
