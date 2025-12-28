@@ -8,6 +8,11 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "author": "Tom Barrasso <tom@barrasso.me> (https://barrasso.me/)",
+  "contributors": [
+    {"name":"Binam Kayastha","url":"https://github.com/binamkayastha"},
+    {"name":" Rohan Bhatane ","url":"https://github.com/bhatanerohan"}
+  ],
   "dependencies": {
     "next": "16.1.1",
     "react": "19.2.3",

@@ -1,6 +1,6 @@
 [
   {
-    "custom_id": "request-1-Alex-Rohrberg",
+    "custom_id": "request-1-Alex-Roarburg",
     "current_location": {
       "city": "Nashville",
       "state": "Tennessee",
@@ -14,7 +14,7 @@
       "connections": 500,
       "followers": 1250
     },
-    "about": "Software Engineer at Schneider Electric specializing in energy management and automation solutions. Passionate about sustainable technology and clean energy infrastructure.",
+    "about": "Software Engineer at Schindler Electric specializing in energy management and automation solutions. Passionate about sustainable technology and clean energy infrastructure.",
     "education": [
       {
         "institution": "University of Tennessee",
@@ -33,8 +33,8 @@
     ],
     "data_freshness": "2025-12-28",
     "sources": [
-      "https://www.linkedin.com/in/alexrohrberg",
-      "https://www.schneider-electric.com/en/about-us/company-profile"
+      "https://www.linkedin.com/in/alexRoarburg",
+      "https://www.Schindler-electric.com/en/about-us/company-profile"
     ]
   },
   {

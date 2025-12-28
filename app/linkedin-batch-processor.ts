@@ -283,10 +283,10 @@ export function generatePrompt(person: LinkedInConnection): string {
   return `Search the web and LinkedIn to find the following information about this individual. Use the most recent and reliable sources available.
 
 Individual Details:
-- Name: ${person.firstName} ${person.lastName}
-- LinkedIn: ${person.url}
-- Current Company: ${person.company || 'Not specified'}
-- Current Position: ${person.position || 'Not specified'}
+- Name: "${person.firstName} ${person.lastName}"
+- LinkedIn: "${person.url}"
+- Current Company: "${person.company || 'Not specified'}"
+- Current Position: "${person.position || 'Not specified'}"
 
 Required Information:
 1. CURRENT LOCATION: Find their current city, state (if applicable), and country. Include coordinates (latitude/longitude) and OpenStreetMap ID if available.
