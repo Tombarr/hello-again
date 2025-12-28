@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Batch Processor</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        input[type="file"],
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .output {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .info {
+            color: #0066cc;
+        }
+        .batch-info {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .batch-info div {
+            margin: 5px 0;
+        }
+        .button-group {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LinkedIn Connections → OpenAI Batch API</h1>
+
+        <div class="section">
+            <label for="apiKey">OpenAI API Key:</label>
+            <input type="password" id="apiKey" placeholder="sk-proj-...">
+            <small style="color: #666;">Your API key is only used in your browser and never sent anywhere except OpenAI</small>
+        </div>
+
+        <div class="section">
+            <label for="csvFile">LinkedIn Connections CSV:</label>
+            <input type="file" id="csvFile" accept=".csv">
+        </div>
+
+        <div class="button-group">
+            <button id="processBtn">1. Process & Upload Batch</button>
+            <button id="downloadJsonlBtn" disabled>2. Download JSONL (Optional)</button>
+        </div>
+
+        <div class="section" id="batchSection" style="display: none;">
+            <h3>Batch Status Checker</h3>
+            <label for="batchId">Batch ID:</label>
+            <input type="text" id="batchId" placeholder="batch_...">
+            <button id="checkStatusBtn" style="margin-top: 10px;">Check Status</button>
+            <button id="downloadResultsBtn" style="margin-top: 10px;">Download Results</button>
+        </div>
+
+        <div class="section">
+            <h3>Output:</h3>
+            <div id="output" class="output">Ready to process...</div>
+        </div>
+    </div>
+
+    <script src="linkedin-batch-processor.js"></script>
+    <script>
+        let currentJsonl = '';
+        let currentBatchId = '';
+
+        const apiKeyInput = document.getElementById('apiKey');
+        const csvFileInput = document.getElementById('csvFile');
+        const processBtn = document.getElementById('processBtn');
+        const downloadJsonlBtn = document.getElementById('downloadJsonlBtn');
+        const checkStatusBtn = document.getElementById('checkStatusBtn');
+        const downloadResultsBtn = document.getElementById('downloadResultsBtn');
+        const batchIdInput = document.getElementById('batchId');
+        const output = document.getElementById('output');
+        const batchSection = document.getElementById('batchSection');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearLog() {
+            output.innerHTML = '';
+        }
+
+        processBtn.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value.trim();
+            const file = csvFileInput.files[0];
+
+            if (!apiKey) {
+                alert('Please enter your OpenAI API key');
+                return;
+            }
+
+            if (!file) {
+                alert('Please select a CSV file');
+                return;
+            }
+
+            try {
+                clearLog();
+                processBtn.disabled = true;
+
+                log('Starting processing...', 'info');
+
+                const result = await processLinkedInConnections(file, apiKey);
+                currentJsonl = result.jsonlContent;
+                currentBatchId = result.batchInfo.batchId;
+
+                log(`✓ Successfully processed ${result.connectionsCount} connections`, 'success');
+                log(`✓ Batch created with ID: ${result.batchInfo.batchId}`, 'success');
+                log(`✓ Status: ${result.batchInfo.status}`, 'info');
+                log(`✓ File ID: ${result.batchInfo.fileId}`, 'info');
+
+                downloadJsonlBtn.disabled = false;
+                batchIdInput.value = currentBatchId;
+                batchSection.style.display = 'block';
+
+                // Save batch ID to localStorage
+                localStorage.setItem('lastBatchId', currentBatchId);
+                log('\nBatch ID saved to localStorage. You can close this page and check status later.', 'info');
+
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                processBtn.disabled = false;
+            }
+        });
+
+        downloadJsonlBtn.addEventListener('click', () => {
+            if (!currentJsonl) {
+                alert('No JSONL content available. Process a file first.');
+                return;
+            }
+
+            const blob = new Blob([currentJsonl], { type: 'application/jsonl' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'linkedin-batch-requests.jsonl';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            log('✓ JSONL file downloaded', 'success');
+        });
+
+        checkStatusBtn.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value.trim();
+            const batchId = batchIdInput.value.trim();
+
+            if (!apiKey || !batchId) {
+                alert('Please enter API key and Batch ID');
+                return;
+            }
+
+            try {
+                checkStatusBtn.disabled = true;
+                log('\nChecking batch status...', 'info');
+
+                const status = await checkBatchStatus(batchId, apiKey);
+
+                log(`Batch ID: ${status.id}`, 'info');
+                log(`Status: ${status.status}`, 'info');
+                log(`Created: ${new Date(status.created_at * 1000).toLocaleString()}`, 'info');
+
+                if (status.request_counts) {
+                    log(`Total requests: ${status.request_counts.total}`, 'info');
+                    log(`Completed: ${status.request_counts.completed}`, 'success');
+                    log(`Failed: ${status.request_counts.failed}`, status.request_counts.failed > 0 ? 'error' : 'info');
+                }
+
+                if (status.status === 'completed') {
+                    log(`\n✓ Batch completed! Output file ID: ${status.output_file_id}`, 'success');
+                    log('Click "Download Results" to get the data', 'info');
+                } else if (status.status === 'failed') {
+                    log(`✗ Batch failed. Check errors.`, 'error');
+                } else {
+                    log(`Batch is still processing... Check again later.`, 'info');
+                }
+
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                checkStatusBtn.disabled = false;
+            }
+        });
+
+        downloadResultsBtn.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value.trim();
+            const batchId = batchIdInput.value.trim();
+
+            if (!apiKey || !batchId) {
+                alert('Please enter API key and Batch ID');
+                return;
+            }
+
+            try {
+                downloadResultsBtn.disabled = true;
+                log('\nRetrieving batch status to get output file ID...', 'info');
+
+                const status = await checkBatchStatus(batchId, apiKey);
+
+                if (status.status !== 'completed') {
+                    alert(`Batch is not completed yet. Current status: ${status.status}`);
+                    log(`✗ Cannot download results. Status: ${status.status}`, 'error');
+                    return;
+                }
+
+                if (!status.output_file_id) {
+                    alert('No output file available');
+                    log(`✗ No output file ID found`, 'error');
+                    return;
+                }
+
+                log(`Downloading results from file: ${status.output_file_id}`, 'info');
+
+                const results = await downloadBatchResults(status.output_file_id, apiKey);
+
+                log(`✓ Downloaded ${results.length} results`, 'success');
+
+                // Download as JSON file
+                const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `batch-results-${batchId}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                log('✓ Results file downloaded', 'success');
+
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                downloadResultsBtn.disabled = false;
+            }
+        });
+
+        // Load last batch ID from localStorage if available
+        window.addEventListener('load', () => {
+            const lastBatchId = localStorage.getItem('lastBatchId');
+            if (lastBatchId) {
+                batchIdInput.value = lastBatchId;
+                batchSection.style.display = 'block';
+                log(`Loaded previous batch ID from storage: ${lastBatchId}`, 'info');
+            }
+        });
+    </script>
+</body>
+</html>
