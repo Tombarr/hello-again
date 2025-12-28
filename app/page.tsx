@@ -1,6 +1,7 @@
 import Image from "next/image";
 import ApiKeyInput from "./components/ApiKeyInput";
 import UploadArea from "./components/UploadArea";
+import LinkedInContactsMap from "./components/LinkedInContactsMap";
 import { Fraunces, Work_Sans } from "next/font/google";
 
 const display = Fraunces({
@@ -245,6 +246,10 @@ export default function Home() {
               <span>Privacy-first</span>
               <span>Local by design</span>
             </div>
+          </section>
+
+          <section className="flex flex-col gap-6">
+            <LinkedInContactsMap />
           </section>
         </section>
       </main>
