@@ -123,7 +123,7 @@ export default function Home() {
               </ol>
             </div>
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 lg:h-full">
               <div className="rounded-3xl border border-[#1d1c1a]/10 bg-[#1d1c1a] p-8 text-[#f6f1ea] shadow-[0_30px_60px_-40px_rgba(0,0,0,0.45)]">
                 <h3 className={`${display.className} text-2xl`}>
                   What you get
@@ -146,29 +146,102 @@ export default function Home() {
                   conversations and new friends!
                 </p>
               </div>
-              <section className="flex flex-col gap-6 rounded-[32px] border border-[#1d1c1a]/10 bg-white/80 p-10 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.4)] backdrop-blur sm:p-12">
-                <div className="flex flex-wrap items-center justify-between gap-6">
-                  <div>
-                    <h2 className={`${display.className} text-3xl`}>
-                      Ready to say hello again?
-                    </h2>
-                    <p className="mt-3 max-w-xl text-base text-[#4b4a45]">
-                      Start with your LinkedIn export. We’ll handle the rest and
-                      send you a fresh, local list in minutes.
-                    </p>
-                  </div>
-                  <div className="w-full max-w-md">
-                    <UploadArea />
-                  </div>
+              <div className="hidden rounded-3xl border border-[#1d1c1a]/10 bg-white/60 p-8 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.4)] backdrop-blur lg:flex lg:flex-1 lg:flex-col">
+                <h3 className={`${display.className} text-2xl`}>
+                  A little hello in motion
+                </h3>
+                <div className="mt-6 flex flex-1 items-center justify-center rounded-2xl border border-[#1d1c1a]/10 bg-white/80 p-6">
+                  <svg
+                    viewBox="0 0 420 180"
+                    className="h-full w-full max-h-48"
+                    role="img"
+                    aria-label="Animated graph connection"
+                  >
+                    <defs>
+                      <linearGradient
+                        id="graphGlow"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="100%"
+                      >
+                        <stop offset="0%" stopColor="#7fd1c7" />
+                        <stop offset="100%" stopColor="#f59e8b" />
+                      </linearGradient>
+                    </defs>
+
+                    <path
+                      className="graph-line"
+                      d="M40 120 C90 40, 160 40, 210 90 S320 150, 380 70"
+                      stroke="url(#graphGlow)"
+                      strokeWidth="3"
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      className="graph-line graph-line--delay"
+                      d="M40 50 C110 110, 170 120, 230 90 S320 30, 380 120"
+                      stroke="#1d1c1a"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeDasharray="6 10"
+                      strokeLinecap="round"
+                      opacity="0.4"
+                    />
+
+                    {[
+                      { cx: 40, cy: 120 },
+                      { cx: 120, cy: 60 },
+                      { cx: 210, cy: 90 },
+                      { cx: 300, cy: 130 },
+                      { cx: 380, cy: 70 },
+                    ].map((node, index) => (
+                      <g key={`${node.cx}-${node.cy}`}>
+                        <circle
+                          cx={node.cx}
+                          cy={node.cy}
+                          r="10"
+                          fill="#1d1c1a"
+                          opacity="0.12"
+                        />
+                        <circle
+                          cx={node.cx}
+                          cy={node.cy}
+                          r="5"
+                          fill="#1d1c1a"
+                          className={`graph-node graph-node--${index}`}
+                        />
+                      </g>
+                    ))}
+                  </svg>
                 </div>
-                <div className="flex flex-wrap gap-6 text-xs uppercase tracking-[0.3em] text-[#7b7872]">
-                  <span>Privacy-first</span>
-                  <span>Local by design</span>
-                </div>
-              </section>
+                <p className="mt-5 text-xs uppercase tracking-[0.3em] text-[#7b7872]">
+                  Local nodes connecting
+                </p>
+              </div>
             </div>
           </div>
 
+          <section className="flex flex-col gap-6 rounded-[32px] border border-[#1d1c1a]/10 bg-white/80 p-10 shadow-[0_20px_50px_-40px_rgba(0,0,0,0.4)] backdrop-blur sm:p-12">
+            <div className="flex flex-col items-center gap-6 text-center">
+              <div className="flex flex-col items-center">
+                <h2 className={`${display.className} text-3xl`}>
+                  Ready to say hello again?
+                </h2>
+                <p className="mt-3 w-full text-base text-[#4b4a45] sm:text-lg">
+                  Start with your LinkedIn export. We’ll handle the rest and
+                  send you a fresh, local list in minutes.
+                </p>
+              </div>
+              <div className="w-full">
+                <UploadArea />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-6 text-xs uppercase tracking-[0.3em] text-[#7b7872]">
+              <span>Privacy-first</span>
+              <span>Local by design</span>
+            </div>
+          </section>
         </section>
       </main>
     </div>

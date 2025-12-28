@@ -54,3 +54,58 @@ body {
   transform-origin: 70% 70%;
   animation: wave 2.4s ease-in-out infinite;
 }
+
+@keyframes graph-draw {
+  0% {
+    stroke-dashoffset: 240;
+    opacity: 0.2;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes node-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+.graph-line {
+  stroke-dasharray: 240;
+  stroke-dashoffset: 240;
+  animation: graph-draw 3.2s ease-in-out infinite;
+}
+
+.graph-line--delay {
+  animation-delay: 0.6s;
+}
+
+.graph-node {
+  transform-origin: center;
+  animation: node-pop 2.4s ease-in-out infinite;
+}
+
+.graph-node--1 {
+  animation-delay: 0.2s;
+}
+
+.graph-node--2 {
+  animation-delay: 0.4s;
+}
+
+.graph-node--3 {
+  animation-delay: 0.6s;
+}
+
+.graph-node--4 {
+  animation-delay: 0.8s;
+}
