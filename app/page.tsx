@@ -1,4 +1,5 @@
 import Image from "next/image";
+import ApiKeyInput from "./components/ApiKeyInput";
 import UploadArea from "./components/UploadArea";
 import { Fraunces, Work_Sans } from "next/font/google";
 
@@ -229,11 +230,12 @@ export default function Home() {
                   Ready to say hello again?
                 </h2>
                 <p className="mt-3 w-full text-base text-[#4b4a45] sm:text-lg">
-                  Start with your LinkedIn export. We’ll handle the rest and
+                  Start with your LinkedIn export. We'll handle the rest and
                   send you a fresh, local list in minutes.
                 </p>
               </div>
-              <div className="w-full">
+              <div className="w-full space-y-6">
+                <ApiKeyInput />
                 <UploadArea />
               </div>
             </div>

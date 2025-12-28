@@ -1,124 +1,80 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  deleteZipFile,
+  getZipFileInfo,
+  saveZipFile,
+  type UploadInfo,
+} from "../lib/indexeddb";
 
-type UploadInfo = {
-  name: string;
-  size: number;
-  type: string;
-  lastModified: number;
-  storedAt: number;
-};
+type UploadInfoDisplay = Omit<UploadInfo, "data">;
 
 export default function UploadArea() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedInfo, setUploadedInfo] = useState<UploadInfo | null>(null);
+  const [uploadedInfo, setUploadedInfo] = useState<UploadInfoDisplay | null>(
+    null
+  );
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+
     const hydrateFromStorage = async () => {
-      const stored = localStorage.getItem("helloAgainUploadInfo");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored) as UploadInfo;
-          if (isMounted) {
-            setUploadedInfo(parsed);
-            setFileName(parsed.name);
-          }
-          return;
-        } catch (err) {
-          localStorage.removeItem("helloAgainUploadInfo");
-        }
-      }
-
       try {
-        const db = await openDatabase();
-        const record = await new Promise<UploadInfo | null>((resolve, reject) => {
-          const transaction = db.transaction("uploads", "readonly");
-          const store = transaction.objectStore("uploads");
-          const request = store.get("linkedinZip");
-          request.onsuccess = () => {
-            const value = request.result as
-              | (UploadInfo & { file?: File })
-              | undefined;
-            if (!value) {
-              resolve(null);
-              return;
-            }
-            resolve({
-              name: value.name,
-              size: value.size,
-              type: value.type,
-              lastModified: value.lastModified,
-              storedAt: Date.now(),
-            });
-          };
-          request.onerror = () => reject(request.error);
-        });
+        const info = await getZipFileInfo();
 
-        if (record && isMounted) {
-          localStorage.setItem("helloAgainUploadInfo", JSON.stringify(record));
-          setUploadedInfo(record);
-          setFileName(record.name);
+        if (info && isMounted) {
+          setUploadedInfo(info);
+          setFileName(info.name);
         }
       } catch (err) {
-        // ignore hydration failures
+        console.error("Failed to load ZIP file info:", err);
       }
     };
 
     void hydrateFromStorage();
+
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const openDatabase = () =>
-    new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("helloAgain", 1);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains("uploads")) {
-          db.createObjectStore("uploads");
-        }
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-
   const storeFile = async (file: File) => {
+    setIsUploading(true);
+    setError(null);
+
     try {
-      const db = await openDatabase();
-      await new Promise<void>((resolve, reject) => {
-        const transaction = db.transaction("uploads", "readwrite");
-        const store = transaction.objectStore("uploads");
-        store.put(
-          {
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            lastModified: file.lastModified,
-            file,
-          },
-          "linkedinZip"
-        );
-        transaction.oncomplete = () => resolve();
-        transaction.onerror = () => reject(transaction.error);
-      });
-      const info: UploadInfo = {
+      // Validate file type
+      if (!file.type.includes("zip") && !file.name.endsWith(".zip")) {
+        throw new Error("Please upload a ZIP file");
+      }
+
+      // Save to IndexedDB with binary data
+      await saveZipFile(file);
+
+      const info: UploadInfoDisplay = {
         name: file.name,
         size: file.size,
-        type: file.type,
+        type: file.type || "application/zip",
         lastModified: file.lastModified,
         storedAt: Date.now(),
       };
-      localStorage.setItem("helloAgainUploadInfo", JSON.stringify(info));
+
       setUploadedInfo(info);
       setError(null);
     } catch (err) {
-      setError("Unable to save file to IndexedDB.");
+      console.error("Upload error:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to save file to IndexedDB."
+      );
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -131,22 +87,17 @@ export default function UploadArea() {
 
   const clearUpload = async () => {
     try {
-      const db = await openDatabase();
-      await new Promise<void>((resolve, reject) => {
-        const transaction = db.transaction("uploads", "readwrite");
-        const store = transaction.objectStore("uploads");
-        store.delete("linkedinZip");
-        transaction.oncomplete = () => resolve();
-        transaction.onerror = () => reject(transaction.error);
-      });
+      await deleteZipFile();
+      setUploadedInfo(null);
+      setFileName(null);
+      setError(null);
+
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
     } catch (err) {
-      // ignore clearing failure
-    }
-    localStorage.removeItem("helloAgainUploadInfo");
-    setUploadedInfo(null);
-    setFileName(null);
-    if (inputRef.current) {
-      inputRef.current.value = "";
+      console.error("Failed to clear upload:", err);
+      setError("Failed to clear upload");
     }
   };
 
@@ -159,6 +110,7 @@ export default function UploadArea() {
     setIsDragging(false);
     const files = event.dataTransfer.files;
     handleFiles(files);
+
     if (inputRef.current) {
       inputRef.current.files = files;
     }
@@ -173,13 +125,25 @@ export default function UploadArea() {
         accept=".zip,application/zip"
         onChange={handleChange}
         className="hidden"
+        disabled={isUploading}
       />
 
       <label
         htmlFor="linkedin-zip"
-        className="inline-flex w-full cursor-pointer items-center justify-center rounded-full bg-[#1d1c1a] px-7 py-3 text-sm font-semibold text-[#f6f1ea] transition hover:-translate-y-0.5 hover:bg-[#2b2926]"
+        className={`inline-flex w-full cursor-pointer items-center justify-center rounded-full bg-[#1d1c1a] px-7 py-3 text-sm font-semibold text-[#f6f1ea] transition ${
+          isUploading
+            ? "cursor-not-allowed opacity-50"
+            : "hover:-translate-y-0.5 hover:bg-[#2b2926]"
+        }`}
       >
-        Upload your LinkedIn ZIP file
+        {isUploading ? (
+          <span className="flex items-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#f6f1ea]/20 border-t-[#f6f1ea]" />
+            Uploading...
+          </span>
+        ) : (
+          "Upload your LinkedIn ZIP file"
+        )}
       </label>
 
       <label
@@ -188,10 +152,12 @@ export default function UploadArea() {
           isDragging
             ? "border-[#1d1c1a] bg-[#1d1c1a]/5"
             : "border-[#1d1c1a]/20 bg-white/70"
-        }`}
+        } ${isUploading ? "cursor-not-allowed opacity-50" : ""}`}
         onDragOver={(event) => {
           event.preventDefault();
-          setIsDragging(true);
+          if (!isUploading) {
+            setIsDragging(true);
+          }
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
@@ -206,6 +172,7 @@ export default function UploadArea() {
           <span className="text-xs font-semibold text-[#b45309]">{error}</span>
         ) : null}
       </label>
+
       {uploadedInfo ? (
         <div className="w-full rounded-2xl border border-[#1d1c1a]/10 bg-white/70 px-5 py-4 text-left text-sm text-[#4b4a45]">
           <div className="flex items-start justify-between gap-4">
@@ -227,6 +194,9 @@ export default function UploadArea() {
           <p className="mt-1 text-xs">
             {(uploadedInfo.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
             {uploadedInfo.type || "application/zip"}
+          </p>
+          <p className="mt-1 text-xs text-[#7b7872]">
+            Uploaded {new Date(uploadedInfo.storedAt).toLocaleDateString()}
           </p>
         </div>
       ) : null}
