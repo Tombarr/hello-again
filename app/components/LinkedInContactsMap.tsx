@@ -36,10 +36,12 @@ type CityGroups = Record<string, CityGroup>;
 
 type LinkedInContactsMapProps = {
   externalPeople?: MapPerson[];
+  externalLoading?: boolean;
 };
 
 export default function LinkedInContactsMap({
   externalPeople,
+  externalLoading = false,
 }: LinkedInContactsMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -145,25 +147,26 @@ export default function LinkedInContactsMap({
     });
 
     const uniqueCities = Object.entries(groups);
-    let geocoded = 0;
+    const citiesToGeocode = uniqueCities.filter(
+      ([cityKey, group]) => !group.coords && !geocodeCacheRef.current[cityKey],
+    );
+
+    if (citiesToGeocode.length > 0) {
+      setLoadingText(`Geocoding ${citiesToGeocode.length} cities...`);
+      await Promise.all(
+        citiesToGeocode.map(async ([cityKey, group]) => {
+          const coords = await geocodeCity(group.city);
+          if (coords) {
+            geocodeCacheRef.current[cityKey] = coords;
+          }
+        }),
+      );
+    }
 
     for (const [cityKey, group] of uniqueCities) {
-      const cityName = group.city;
-
-      if (!group.coords && !geocodeCacheRef.current[cityKey]) {
-        const coords = await geocodeCity(cityName);
-        if (coords) {
-          geocodeCacheRef.current[cityKey] = coords;
-        }
-      }
-
       if (geocodeCacheRef.current[cityKey] && !group.coords) {
         group.coords = geocodeCacheRef.current[cityKey];
       }
-
-      geocoded += 1;
-      setLoadingText(`Geocoding ${geocoded}/${uniqueCities.length} cities...`);
-      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     setCityGroups(groups);
@@ -211,8 +214,8 @@ export default function LinkedInContactsMap({
 
       el.textContent = count > 999 ? "999+" : String(count);
       el.title = `${group.city}: ${count} contacts`;
-      // Ensure larger clusters render above smaller ones
-      el.style.zIndex = String(1000 + count);
+      // Ensure larger clusters render above smaller ones without eclipsing the sidebar
+      el.style.zIndex = String(10 + count);
 
       el.addEventListener("click", () => {
         setSelectedCity(group);
@@ -456,6 +459,7 @@ export default function LinkedInContactsMap({
         .linkedin-map .map-container {
           flex: 1;
           position: relative;
+          z-index: 0;
         }
 
         .linkedin-map .map-container > div:first-child {
@@ -702,10 +706,10 @@ export default function LinkedInContactsMap({
               </div>
             )}
 
-            {isLoading && (
+            {(isLoading || externalLoading) && (
               <div className="loading-overlay">
                 <div className="spinner" />
-                <p>{loadingText}</p>
+                <p>{externalLoading ? "Loading batch results..." : loadingText}</p>
               </div>
             )}
           </div>

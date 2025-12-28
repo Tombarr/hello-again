@@ -44,6 +44,7 @@ export default function ProcessPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [mapPeople, setMapPeople] = useState<MapPerson[]>([]);
+  const [isMapLoading, setIsMapLoading] = useState(false);
 
   // Import batches state
   const [openAIBatches, setOpenAIBatches] = useState<Array<{
@@ -224,6 +225,7 @@ export default function ProcessPage() {
     }
 
     try {
+      setIsMapLoading(true);
       const result = await processBatchWithConnections(batch.outputFileId);
 
       if (result.success && Array.isArray(result.data)) {
@@ -255,6 +257,8 @@ export default function ProcessPage() {
     } catch (err) {
       console.error("❌ Merge error:", err);
       setError("Failed to merge data");
+    } finally {
+      setIsMapLoading(false);
     }
   };
 
@@ -643,7 +647,10 @@ export default function ProcessPage() {
             )}
 
             <div className="mt-8">
-              <LinkedInContactsMap externalPeople={mapPeople} />
+              <LinkedInContactsMap
+                externalPeople={mapPeople}
+                externalLoading={isMapLoading}
+              />
             </div>
           </div>
         </section>
