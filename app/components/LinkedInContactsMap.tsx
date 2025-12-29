@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -52,6 +52,8 @@ export default function LinkedInContactsMap({
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const geocodeCacheRef = useRef<Record<string, CityCoords>>({});
+  const companyFilterRef = useRef<HTMLDivElement | null>(null);
+  const titleFilterRef = useRef<HTMLDivElement | null>(null);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [cityGroups, setCityGroups] = useState<CityGroups>({});
@@ -63,6 +65,12 @@ export default function LinkedInContactsMap({
   const [loadingText, setLoadingText] = useState("");
   const [hasData, setHasData] = useState(false);
   const [minConnections, setMinConnections] = useState(1);
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
+  const [isCompanyOpen, setIsCompanyOpen] = useState(false);
+  const [isTitleOpen, setIsTitleOpen] = useState(false);
+  const [companyQuery, setCompanyQuery] = useState("");
+  const [titleQuery, setTitleQuery] = useState("");
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
@@ -119,6 +127,87 @@ export default function LinkedInContactsMap({
   }, [fullBleed]);
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (companyFilterRef.current && !companyFilterRef.current.contains(target)) {
+        setIsCompanyOpen(false);
+      }
+      if (titleFilterRef.current && !titleFilterRef.current.contains(target)) {
+        setIsTitleOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const companyOptions = useMemo(() => {
+    const options = new Map<string, string>();
+    Object.values(cityGroups).forEach((group) => {
+      group.people.forEach((person) => {
+        const company = person.company?.trim();
+        if (!company) return;
+        const key = company.toLowerCase();
+        if (!options.has(key)) {
+          options.set(key, company);
+        }
+      });
+    });
+    return Array.from(options.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [cityGroups]);
+
+  const titleOptions = useMemo(() => {
+    const options = new Map<string, string>();
+    Object.values(cityGroups).forEach((group) => {
+      group.people.forEach((person) => {
+        const title = person.position?.trim();
+        if (!title) return;
+        const key = title.toLowerCase();
+        if (!options.has(key)) {
+          options.set(key, title);
+        }
+      });
+    });
+    return Array.from(options.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [cityGroups]);
+
+  const filteredCompanyOptions = useMemo(() => {
+    const query = companyQuery.trim().toLowerCase();
+    if (!query) return companyOptions;
+    const matches = companyOptions.filter((option) =>
+      option.label.toLowerCase().includes(query),
+    );
+    const selected = companyOptions.filter((option) =>
+      selectedCompanies.includes(option.value),
+    );
+    const merged = new Map<string, { value: string; label: string }>();
+    selected.forEach((option) => merged.set(option.value, option));
+    matches.forEach((option) => merged.set(option.value, option));
+    return Array.from(merged.values());
+  }, [companyOptions, companyQuery, selectedCompanies]);
+
+  const filteredTitleOptions = useMemo(() => {
+    const query = titleQuery.trim().toLowerCase();
+    if (!query) return titleOptions;
+    const matches = titleOptions.filter((option) =>
+      option.label.toLowerCase().includes(query),
+    );
+    const selected = titleOptions.filter((option) =>
+      selectedTitles.includes(option.value),
+    );
+    const merged = new Map<string, { value: string; label: string }>();
+    selected.forEach((option) => merged.set(option.value, option));
+    matches.forEach((option) => merged.set(option.value, option));
+    return Array.from(merged.values());
+  }, [titleOptions, titleQuery, selectedTitles]);
+
+  useEffect(() => {
     if (!map.current || !isMapLoaded) return;
     renderMarkers(true);
   }, [cityGroups, isMapLoaded]);
@@ -126,7 +215,7 @@ export default function LinkedInContactsMap({
   useEffect(() => {
     if (!map.current || !isMapLoaded) return;
     renderMarkers(false);
-  }, [minConnections, isMapLoaded]);
+  }, [minConnections, selectedCompanies, selectedTitles, isMapLoaded]);
 
   const showStatus = (message: string, type: StatusType) => {
     setStatus({ message, type });
@@ -214,6 +303,19 @@ export default function LinkedInContactsMap({
     void processPeopleList(externalPeople);
   }, [externalPeople]);
 
+  const matchesFilters = (person: MapPerson) => {
+    const companyKey = (person.company || "").trim().toLowerCase();
+    const titleKey = (person.position || "").trim().toLowerCase();
+
+    const matchesCompany = selectedCompanies.length
+      ? selectedCompanies.includes(companyKey)
+      : true;
+    const matchesTitle = selectedTitles.length
+      ? selectedTitles.includes(titleKey)
+      : true;
+    return matchesCompany && matchesTitle;
+  };
+
   const renderMarkers = (shouldFitBounds: boolean) => {
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
@@ -222,11 +324,12 @@ export default function LinkedInContactsMap({
     let hasMarkers = false;
 
     Object.values(cityGroups).forEach((group) => {
-      if (group.people.length < minConnections) return;
+      const filteredPeople = group.people.filter(matchesFilters);
+      if (filteredPeople.length < minConnections) return;
       if (!group.coords || !map.current) return;
 
       hasMarkers = true;
-      const count = group.people.length;
+      const count = filteredPeople.length;
       const coords = group.coords;
       if (!coords) return;
 
@@ -276,6 +379,10 @@ export default function LinkedInContactsMap({
     setSelectedCity(null);
   };
 
+  const selectedCityFilteredCount = selectedCity
+    ? selectedCity.people.filter(matchesFilters).length
+    : 0;
+
   return (
     <div className={`linkedin-map${fullBleed ? " full-bleed" : ""}`}>
       <style>{`
@@ -313,7 +420,7 @@ export default function LinkedInContactsMap({
           padding: 16px 24px;
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 14px;
           flex-wrap: wrap;
           box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
           z-index: 100;
@@ -324,6 +431,13 @@ export default function LinkedInContactsMap({
           font-size: 1.4rem;
           font-weight: 600;
           margin-right: auto;
+        }
+
+        .linkedin-map .toolbar {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
         }
 
         .linkedin-map .filter-control {
@@ -348,9 +462,101 @@ export default function LinkedInContactsMap({
           background: #ffffff;
         }
 
+        .linkedin-map .filter-control input[type="text"] {
+          width: 160px;
+        }
+
         .linkedin-map .filter-control input:focus {
           outline: 2px solid rgba(255, 255, 255, 0.6);
           outline-offset: 2px;
+        }
+
+        .linkedin-map .filter-control select {
+          border: none;
+          border-radius: 999px;
+          padding: 4px 10px;
+          font-size: 0.9rem;
+          color: #0f172a;
+          background: #ffffff;
+        }
+
+        .linkedin-map .filter-button {
+          cursor: pointer;
+          border: none;
+        }
+
+        .linkedin-map .filter-dropdown {
+          position: relative;
+        }
+
+        .linkedin-map .filter-menu {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          min-width: 220px;
+          max-height: 280px;
+          overflow-y: auto;
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 18px 30px rgba(15, 23, 42, 0.18);
+          border: 1px solid rgba(15, 23, 42, 0.12);
+          padding: 10px;
+          z-index: 120;
+          display: none;
+        }
+
+        .linkedin-map .filter-menu.open {
+          display: block;
+        }
+
+        .linkedin-map .filter-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 8px;
+          border-radius: 10px;
+          font-size: 0.85rem;
+          color: #1e293b;
+          cursor: pointer;
+        }
+
+        .linkedin-map .filter-item:hover {
+          background: #f1f5f9;
+        }
+
+        .linkedin-map .filter-item input {
+          width: 14px;
+          height: 14px;
+        }
+
+        .linkedin-map .filter-empty {
+          padding: 8px 10px;
+          font-size: 0.8rem;
+          color: #64748b;
+        }
+
+        .linkedin-map .filter-actions {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 8px;
+          padding: 0 4px;
+          flex-wrap: wrap;
+        }
+
+        .linkedin-map .filter-actions button {
+          border: none;
+          background: #f1f5f9;
+          color: #1e293b;
+          border-radius: 999px;
+          padding: 4px 10px;
+          font-size: 0.75rem;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .linkedin-map .filter-search {
+          flex: 1 1 120px;
+          min-width: 120px;
         }
 
         .linkedin-map .status-badge {
@@ -663,21 +869,172 @@ export default function LinkedInContactsMap({
         <header className="header">
           <h1>📍 LinkedIn Contacts Map</h1>
 
-          <label className="filter-control" htmlFor="min-connections">
-            Min connections:
-            <input
-              id="min-connections"
-              type="number"
-              min={1}
-              value={minConnections}
-              onChange={(event) => {
-                const value = Number(event.target.value);
-                setMinConnections(
-                  Number.isFinite(value) && value > 0 ? value : 1,
+          <div className="toolbar">
+            <label className="filter-control" htmlFor="min-connections">
+              Min connections:
+              <input
+                id="min-connections"
+                type="number"
+                min={1}
+                value={minConnections}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  setMinConnections(
+                    Number.isFinite(value) && value > 0 ? value : 1,
                 );
               }}
             />
           </label>
+
+            <div className="filter-dropdown" ref={companyFilterRef}>
+              <button
+                type="button"
+                className="filter-control filter-button"
+                onClick={() => setIsCompanyOpen((open) => !open)}
+              >
+                Company:
+                <span>
+                  {selectedCompanies.length
+                    ? `${selectedCompanies.length} selected`
+                    : "All"}
+                </span>
+              </button>
+              <div className={`filter-menu ${isCompanyOpen ? "open" : ""}`}>
+                <div className="filter-actions">
+                  <input
+                    type="text"
+                    className="filter-search"
+                    value={companyQuery}
+                    onChange={(event) => setCompanyQuery(event.target.value)}
+                    placeholder="Search companies..."
+                    style={{
+                      borderRadius: 999,
+                      border: "1px solid #e2e8f0",
+                      padding: "4px 10px",
+                      fontSize: 12,
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedCompanies(companyOptions.map((option) => option.value))
+                    }
+                  >
+                    Select all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCompanies([])}
+                  >
+                    Clear
+                  </button>
+                </div>
+                {companyOptions.length === 0 ? (
+                  <div className="filter-empty">No companies found</div>
+                ) : filteredCompanyOptions.length === 0 ? (
+                  <div className="filter-empty">No matches</div>
+                ) : (
+                  filteredCompanyOptions.map((option) => (
+                    <label key={option.value} className="filter-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedCompanies.includes(option.value)}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setSelectedCompanies((prev) =>
+                            checked
+                              ? [...prev, option.value]
+                              : prev.filter((value) => value !== option.value),
+                          );
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="filter-dropdown" ref={titleFilterRef}>
+              <button
+                type="button"
+                className="filter-control filter-button"
+                onClick={() => setIsTitleOpen((open) => !open)}
+              >
+                Job title:
+                <span>
+                  {selectedTitles.length
+                    ? `${selectedTitles.length} selected`
+                    : "All"}
+                </span>
+              </button>
+              <div className={`filter-menu ${isTitleOpen ? "open" : ""}`}>
+                <div className="filter-actions">
+                  <input
+                    type="text"
+                    className="filter-search"
+                    value={titleQuery}
+                    onChange={(event) => setTitleQuery(event.target.value)}
+                    placeholder="Search titles..."
+                    style={{
+                      borderRadius: 999,
+                      border: "1px solid #e2e8f0",
+                      padding: "4px 10px",
+                      fontSize: 12,
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedTitles(titleOptions.map((option) => option.value))
+                    }
+                  >
+                    Select all
+                  </button>
+                  <button type="button" onClick={() => setSelectedTitles([])}>
+                    Clear
+                  </button>
+                </div>
+                {titleOptions.length === 0 ? (
+                  <div className="filter-empty">No job titles found</div>
+                ) : filteredTitleOptions.length === 0 ? (
+                  <div className="filter-empty">No matches</div>
+                ) : (
+                  filteredTitleOptions.map((option) => (
+                    <label key={option.value} className="filter-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedTitles.includes(option.value)}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setSelectedTitles((prev) =>
+                            checked
+                              ? [...prev, option.value]
+                              : prev.filter((value) => value !== option.value),
+                          );
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <label className="filter-control" htmlFor="sort-order">
+              Sort:
+              <select
+                id="sort-order"
+                value={sortOrder}
+                onChange={(event) =>
+                  setSortOrder(event.target.value as "newest" | "oldest")
+                }
+              >
+                <option value="newest">Latest</option>
+                <option value="oldest">Oldest</option>
+              </select>
+            </label>
+          </div>
 
           {status.message && (
             <span className={`status-badge ${status.type}`}>
@@ -692,29 +1049,8 @@ export default function LinkedInContactsMap({
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <h2>
                   <span>{selectedCity?.city || "City"}</span>
-                  <span className="count">{selectedCity?.people?.length || 0}</span>
+                  <span className="count">{selectedCityFilteredCount}</span>
                 </h2>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <label htmlFor="sort-order" style={{ fontSize: 12, color: "#64748b" }}>
-                    Sort:
-                  </label>
-                  <select
-                    id="sort-order"
-                    value={sortOrder}
-                    onChange={(e) =>
-                      setSortOrder(e.target.value === "oldest" ? "oldest" : "newest")
-                    }
-                    style={{
-                      borderRadius: 6,
-                      padding: "6px 8px",
-                      fontSize: 13,
-                      border: "1px solid #e2e8f0",
-                    }}
-                  >
-                    <option value="newest">Latest</option>
-                    <option value="oldest">Oldest</option>
-                  </select>
-                </div>
               </div>
               <button className="close-btn" onClick={closePanel}>
                 ×
@@ -723,11 +1059,17 @@ export default function LinkedInContactsMap({
             <div className="panel-content">
               {(() => {
                 const peopleToShow = selectedCity
-                  ? [...selectedCity.people].sort((a, b) => {
-                      const ta = a.connectedOn ? new Date(a.connectedOn).getTime() : 0;
-                      const tb = b.connectedOn ? new Date(b.connectedOn).getTime() : 0;
-                      return sortOrder === "newest" ? tb - ta : ta - tb;
-                    })
+                  ? [...selectedCity.people]
+                      .filter(matchesFilters)
+                      .sort((a, b) => {
+                        const ta = a.connectedOn
+                          ? new Date(a.connectedOn).getTime()
+                          : 0;
+                        const tb = b.connectedOn
+                          ? new Date(b.connectedOn).getTime()
+                          : 0;
+                        return sortOrder === "newest" ? tb - ta : ta - tb;
+                      })
                   : [];
 
                 return peopleToShow.map((person, idx) => (
