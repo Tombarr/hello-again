@@ -59,11 +59,6 @@ export default function Home() {
 
         <section className="relative mx-auto flex max-w-6xl flex-col gap-12 px-6 pb-20 pt-16 sm:px-10 lg:px-16">
           <header className="flex flex-col gap-6">
-            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.3em] text-[#4b4a45]">
-              <span className="rounded-full border border-[#2f2d2b]/20 px-4 py-2">
-                Hello Again
-              </span>
-            </div>
             <h1
               className={`${display.className} max-w-3xl text-4xl leading-tight sm:text-5xl lg:text-6xl`}
             >
@@ -145,14 +140,6 @@ export default function Home() {
                     5
                   </span>
                   <span>Download the ZIP file of your LinkedIn data.</span>
-                </li>
-                <li className="grid grid-cols-[2.5rem_1fr] items-center gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f59e8b]/30 text-sm font-semibold">
-                    6
-                  </span>
-                  <span>
-                    Upload the ZIP to Hello Again to build your city list.
-                  </span>
                 </li>
               </ol>
             </div>
@@ -249,9 +236,6 @@ export default function Home() {
                     ))}
                   </svg>
                 </div>
-                <p className="mt-5 text-xs uppercase tracking-[0.3em] text-[#7b7872]">
-                  Local nodes connecting
-                </p>
               </div>
             </div>
           </div>
@@ -268,8 +252,16 @@ export default function Home() {
                 </p>
               </div>
               <div className="w-full space-y-6">
-                <ApiKeyInput />
                 <UploadArea />
+                <div className="grid w-full grid-cols-[2.5rem_1fr] items-center gap-4 text-left">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffb86c]/30 text-sm font-semibold">
+                    7
+                  </span>
+                  <span className="text-sm font-semibold text-[#3b3a35]">
+                    Add your OpenAI API key to process the data.
+                  </span>
+                </div>
+                <ApiKeyInput />
 
                 {hasFile && (
                   <button
