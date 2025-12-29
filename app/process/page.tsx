@@ -244,12 +244,11 @@ export default function ProcessPage() {
         if (zipBlob) {
           // Try common filenames
           let candidates = await findZipFiles(zipBlob, "*messages*.csv");
-          let filename =
-            candidates && candidates.length > 0 ? candidates[0].filename : undefined;
+          let filename = candidates?.[0]?.filename;
 
           if (!filename) {
             candidates = await findZipFiles(zipBlob, "*message*.csv");
-            filename = candidates && candidates.length > 0 ? candidates[0].filename : undefined;
+            filename = candidates?.[0]?.filename;
           }
 
           if (filename) {
@@ -257,21 +256,22 @@ export default function ProcessPage() {
             if (csvText) {
               const buildMessageCountsFromCsv = (csv: string) => {
                 const lines = csv.split(/\r?\n/).filter(Boolean);
-                if (lines.length === 0) return new Map<string, number>();
-                const headerCols = lines[0]
+                const headerLine = lines[0];
+                if (!headerLine) return new Map<string, number>();
+                const headerCols = headerLine
                   .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
                   .map((h) => h.trim().toLowerCase());
                 const urlIdx = headerCols.findIndex((h) => /url|profile/.test(h));
                 if (urlIdx === -1) return new Map<string, number>();
 
                 const counts = new Map<string, number>();
-                for (let i = 1; i < lines.length; i++) {
-                  const cols = lines[i]
+                for (const line of lines.slice(1)) {
+                  if (!line) continue;
+                  const cols = line
                     .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
                     .map((c) => c.trim().replace(/^"|"$/g, ""));
-                  const url = cols[urlIdx];
-                  if (!url) continue;
-                  const normalized = url.split("?")[0].replace(/\/$/, "");
+                  const normalized = cols[urlIdx]?.split("?")[0]?.replace(/\/$/, "");
+                  if (!normalized) continue;
                   counts.set(normalized, (counts.get(normalized) || 0) + 1);
                 }
                 return counts;
@@ -291,27 +291,31 @@ export default function ProcessPage() {
       if (result.success && Array.isArray(result.data)) {
         const connections = result.data as EnrichedConnection[];
         const people: MapPerson[] = connections.flatMap((connection) => {
-          const city = connection.location?.city;
+          if (!connection) return [];
+          const safeConnection = connection;
+          const city = safeConnection.location?.city;
           if (!city) return [];
 
-          const country = connection.location?.country;
-          const name = `${connection.firstName ?? ""} ${connection.lastName ?? ""}`.trim();
-          const profileUrl = (connection.url ?? "").split("?")[0].replace(/\/$/, "");
+          const country = safeConnection.location?.country;
+          const name = `${safeConnection.firstName ?? ""} ${safeConnection.lastName ?? ""}`.trim();
+          const rawProfileUrl: string = safeConnection.url ?? "";
+          const profileUrl =
+            rawProfileUrl.split("?")[0]?.replace(/\/$/, "") ?? "";
           const chatCount = messageCounts.get(profileUrl) ?? 0;
 
           const person: MapPerson = {
             name: name || "Unknown",
-            url: connection.url ?? "",
+            url: safeConnection.url ?? "",
             city: country ? `${city}, ${country}` : city,
-            company: connection.company ?? "",
-            position: connection.position ?? "",
-            connectedOn: connection.connectedOn ?? "",
+            company: safeConnection.company ?? "",
+            position: safeConnection.position ?? "",
+            connectedOn: safeConnection.connectedOn ?? "",
             chatCount,
           };
 
           // Add optional fields only if they have values
-          if (connection.position) person.position = connection.position;
-          if (connection.company) person.company = connection.company;
+          if (safeConnection.position) person.position = safeConnection.position;
+          if (safeConnection.company) person.company = safeConnection.company;
 
           return [person];
         });
