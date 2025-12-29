@@ -1,6 +1,14 @@
 # Hello Again 👏
 
-Reconnect with LinkedIn connections in your city.
+![Hello Again Screenshot](./preview.png)
+
+**Hello Again** maps your LinkedIn connections so you can reconnect with people near you.
+
+Hello Again leverages LinkedIn's [Download Your Data](https://www.linkedin.com/comm/psettings/member-data) and OpenAI Batch to affordably identify the location of your connections, giving you a powerful new way to discover and connect. Data is rendered using MapBox.
+
+* **Privacy by Design**. Hello Again stores all data in _your_ browser. No web server
+* **Acceptable Use**. Hello Again doesn't scrape LinkedIn or leverage forbidden extensions
+* **Free & Open Source**. Hello Again is completely free and open source
 
 ## The Process
 
