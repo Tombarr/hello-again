@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import LinkedInProfileImage from "./LinkedInProfileImage";
 
 const MAPBOX_TOKEN =
   process.env.NEXT_PUBLIC_MAPBOX_TOKEN ??
@@ -671,11 +672,42 @@ export default function LinkedInContactsMap({
           transform: translateY(-2px);
         }
 
+        .linkedin-map .person-card-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .linkedin-map .person-details {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .linkedin-map .person-avatar {
+          flex-shrink: 0;
+        }
+
         .linkedin-map .person-name {
           font-weight: 600;
           color: #1e293b;
           font-size: 1rem;
+          margin-bottom: 4px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .linkedin-map .person-job {
+          font-size: 0.875rem;
+          color: #64748b;
           margin-bottom: 8px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .linkedin-map .job-separator {
+          color: #94a3b8;
         }
 
         .linkedin-map .person-role {
@@ -1086,45 +1118,60 @@ export default function LinkedInContactsMap({
 
                 return peopleToShow.map((person, idx) => (
                   <div key={`${person.name}-${idx}`} className="person-card">
-                    <div className="person-name">{person.name}</div>
-                    {(person.position || person.company) && (
-                      <div className="person-role">
-                        {person.position || "Unknown role"}
-                        {person.company ? ` · ${person.company}` : ""}
+                    <div className="person-card-content">
+                      {person.url && (
+                        <LinkedInProfileImage
+                          profileUrl={person.url}
+                          alt={person.name}
+                          size={48}
+                          className="person-avatar"
+                        />
+                      )}
+                      <div className="person-details">
+                        <div className="person-name">{person.name}</div>
+                        {(person.position || person.company) && (
+                          <div className="person-job">
+                            {person.position && <span>{person.position}</span>}
+                            {person.position && person.company && (
+                              <span className="job-separator"> at </span>
+                            )}
+                            {person.company && <span>{person.company}</span>}
+                          </div>
+                        )}
+                        {person.connectedOn && (
+                          <div className="person-connected">
+                            Connected on{" "}
+                            {new Date(person.connectedOn).toLocaleDateString()}
+                          </div>
+                        )}
+                        {person.url ? (
+                          <a
+                            href={person.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="person-link"
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                            View Profile
+                          </a>
+                        ) : (
+                          <span className="no-url">No profile URL</span>
+                        )}
                       </div>
-                    )}
-                    {person.connectedOn && (
-                      <div className="person-connected">
-                        Connected on{" "}
-                        {new Date(person.connectedOn).toLocaleDateString()}
-                      </div>
-                    )}
-                    {person.url ? (
-                      <a
-                        href={person.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="person-link"
-                      >
-                        <svg
-                          width="14"
-                          height="14"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                        View Profile
-                      </a>
-                    ) : (
-                      <span className="no-url">No profile URL</span>
-                    )}
+                    </div>
                   </div>
                 ));
               })()}
