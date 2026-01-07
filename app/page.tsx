@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import ApiKeyInput from "./components/ApiKeyInput";
 import UploadArea from "./components/UploadArea";
-import { hasZipFile } from "./lib/indexeddb";
+import { hasZipFile, getApiKeyValidationStatus } from "./lib/indexeddb";
 import { Fraunces, Work_Sans } from "next/font/google";
 
 const display = Fraunces({
@@ -23,22 +23,25 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 export default function Home() {
   const router = useRouter();
   const [hasFile, setHasFile] = useState(false);
+  const [hasValidApiKey, setHasValidApiKey] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    const checkFile = async () => {
+    const checkFileAndApiKey = async () => {
       const fileExists = await hasZipFile();
+      const isApiKeyValid = await getApiKeyValidationStatus();
       if (isMounted) {
         setHasFile(fileExists);
+        setHasValidApiKey(isApiKeyValid);
       }
     };
 
-    void checkFile();
+    void checkFileAndApiKey();
 
-    // Re-check periodically in case file is uploaded
+    // Re-check periodically in case file is uploaded or API key is added
     const interval = setInterval(() => {
-      void checkFile();
+      void checkFileAndApiKey();
     }, 2000);
 
     return () => {
@@ -247,7 +250,7 @@ export default function Home() {
                   Ready to say hello again?
                 </h2>
                 <p className="mt-3 w-full text-base text-[#4b4a45] sm:text-lg">
-                  Start with your LinkedIn export. We'll handle the rest and
+                  Start with your LinkedIn export. We&apos;ll handle the rest and
                   send you a fresh, local list in minutes.
                 </p>
               </div>
@@ -263,7 +266,13 @@ export default function Home() {
                 </div>
                 <ApiKeyInput />
 
-                {hasFile && (
+                {hasFile && !hasValidApiKey && (
+                  <div className="rounded-lg bg-[#fef2f2] border border-[#b91c1c]/20 px-4 py-3 text-sm text-[#b91c1c]">
+                    ⚠ Please add a valid OpenAI API key above to continue
+                  </div>
+                )}
+
+                {hasFile && hasValidApiKey && (
                   <button
                     onClick={() => router.push("/process")}
                     className="w-full rounded-full bg-[#7fd1c7] px-7 py-3 text-sm font-semibold text-[#1d1c1a] transition hover:-translate-y-0.5 hover:bg-[#6fc0b7]"
@@ -271,12 +280,23 @@ export default function Home() {
                     Continue to Process Data →
                   </button>
                 )}
+
+                {!hasFile && hasValidApiKey && (
+                  <div className="rounded-lg bg-[#eff6ff] border border-[#1e40af]/20 px-4 py-3 text-sm text-[#1e40af]">
+                    ✓ API key validated. Upload your LinkedIn data above to continue.
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-6 text-xs uppercase tracking-[0.3em] text-[#7b7872]">
-              <span>Privacy-first</span>
-              <span>Local by design</span>
+              <span>Privacy-focused</span>
+              <span>Local-only</span>
             </div>
+            <p>
+              <small>
+                <a href="https://github.com/Tombarr/hello-again" rel="external noreferrer" className="underline decoration-[#1d1c1a]/30 underline-offset-4 transition hover:decoration-[#1d1c1a]">Hello Again</a> is an open source project that runs entirely in your browser. It is not affiliated with or endorsed by LinkedIn or Microsoft.
+              </small>
+            </p>
           </section>
 
         </section>

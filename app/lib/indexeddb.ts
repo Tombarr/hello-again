@@ -55,6 +55,7 @@ export function openDatabase(): Promise<IDBDatabase> {
 // ============================================================================
 
 const OPENAI_API_KEY = "openai_api_key";
+const OPENAI_API_KEY_VALIDATED = "openai_api_key_validated";
 
 /**
  * Validate OpenAI API key format
@@ -131,10 +132,53 @@ export async function deleteApiKey(): Promise<void> {
     const store = transaction.objectStore(SETTINGS_STORE);
 
     store.delete(OPENAI_API_KEY);
+    store.delete(OPENAI_API_KEY_VALIDATED);
 
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
   });
+}
+
+/**
+ * Save API key validation status to IndexedDB
+ */
+export async function saveApiKeyValidationStatus(isValid: boolean): Promise<void> {
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(SETTINGS_STORE, "readwrite");
+    const store = transaction.objectStore(SETTINGS_STORE);
+
+    store.put(isValid, OPENAI_API_KEY_VALIDATED);
+
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+/**
+ * Get API key validation status from IndexedDB
+ */
+export async function getApiKeyValidationStatus(): Promise<boolean> {
+  try {
+    const db = await openDatabase();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(SETTINGS_STORE, "readonly");
+      const store = transaction.objectStore(SETTINGS_STORE);
+      const request = store.get(OPENAI_API_KEY_VALIDATED);
+
+      request.onsuccess = () => {
+        const value = request.result;
+        resolve(typeof value === "boolean" ? value : false);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error("Failed to get API key validation status:", error);
+    return false;
+  }
 }
 
 // ============================================================================

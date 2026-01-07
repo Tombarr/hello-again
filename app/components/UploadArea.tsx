@@ -13,7 +13,6 @@ type UploadInfoDisplay = Omit<UploadInfo, "data">;
 export default function UploadArea() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedInfo, setUploadedInfo] = useState<UploadInfoDisplay | null>(
     null
@@ -29,7 +28,6 @@ export default function UploadArea() {
 
         if (info && isMounted) {
           setUploadedInfo(info);
-          setFileName(info.name);
         }
       } catch (err) {
         console.error("Failed to load ZIP file info:", err);
@@ -82,7 +80,6 @@ export default function UploadArea() {
     if (!files || files.length === 0) return;
     const file = files[0];
     if (!file) return;
-    setFileName(file.name);
     void storeFile(file);
   };
 
@@ -90,7 +87,6 @@ export default function UploadArea() {
     try {
       await deleteZipFile();
       setUploadedInfo(null);
-      setFileName(null);
       setError(null);
 
       if (inputRef.current) {

@@ -6,7 +6,10 @@ import {
   getApiKey,
   saveApiKey,
   validateOpenAIApiKey,
+  saveApiKeyValidationStatus,
+  getApiKeyValidationStatus,
 } from "../lib/indexeddb";
+import { validateOpenAIApiKeyWithAPI } from "../lib/api-key-validator";
 
 export default function ApiKeyInput() {
   const [apiKey, setApiKey] = useState("");
@@ -15,26 +18,49 @@ export default function ApiKeyInput() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isValidating, setIsValidating] = useState(false);
+  const [isValidated, setIsValidated] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadApiKey = async () => {
+    const loadAndValidateApiKey = async () => {
       try {
         const key = await getApiKey();
-        if (isMounted) {
-          setSavedKey(key);
-          setIsLoading(false);
+        const validated = await getApiKeyValidationStatus();
+
+        if (!isMounted) return;
+
+        setSavedKey(key);
+        setIsValidated(validated);
+        setIsLoading(false);
+
+        // If key exists but hasn't been validated, validate it automatically
+        if (key && !validated) {
+          setIsValidating(true);
+          const validationResult = await validateOpenAIApiKeyWithAPI(key);
+
+          if (!isMounted) return;
+
+          if (validationResult.isValid) {
+            await saveApiKeyValidationStatus(true);
+            setIsValidated(true);
+          } else {
+            // Key is invalid, show error
+            setError(validationResult.error || "API key validation failed");
+          }
+          setIsValidating(false);
         }
       } catch (err) {
         console.error("Failed to load API key:", err);
         if (isMounted) {
           setIsLoading(false);
+          setIsValidating(false);
         }
       }
     };
 
-    void loadApiKey();
+    void loadAndValidateApiKey();
 
     return () => {
       isMounted = false;
@@ -58,12 +84,28 @@ export default function ApiKeyInput() {
     }
 
     try {
+      // Validate the key with OpenAI API
+      setIsValidating(true);
+      const validationResult = await validateOpenAIApiKeyWithAPI(apiKey);
+
+      if (!validationResult.isValid) {
+        setIsValidating(false);
+        setError(validationResult.error || "API key validation failed");
+        return;
+      }
+
+      // Save the key and validation status
       await saveApiKey(apiKey);
+      await saveApiKeyValidationStatus(true);
+
       setSavedKey(apiKey);
+      setIsValidated(true);
       setApiKey("");
       setSuccess(true);
+      setIsValidating(false);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
+      setIsValidating(false);
       setError(
         err instanceof Error ? err.message : "Failed to save API key"
       );
@@ -74,6 +116,7 @@ export default function ApiKeyInput() {
     try {
       await deleteApiKey();
       setSavedKey(null);
+      setIsValidated(false);
       setApiKey("");
       setError(null);
       setSuccess(false);
@@ -139,6 +182,20 @@ export default function ApiKeyInput() {
             </button>
           </div>
 
+          {isValidating ? (
+            <div className="rounded-lg bg-[#eff6ff] px-4 py-2 text-xs text-[#1e40af]">
+              Validating API key with OpenAI...
+            </div>
+          ) : isValidated ? (
+            <div className="rounded-lg bg-[#f0fdf4] px-4 py-2 text-xs text-[#166534]">
+              ✓ API key is valid and ready to use
+            </div>
+          ) : error ? (
+            <div className="rounded-lg bg-[#fef2f2] px-4 py-2 text-xs text-[#b91c1c]">
+              {error}
+            </div>
+          ) : null}
+
           <div className="flex gap-2">
             <button
               type="button"
@@ -184,19 +241,25 @@ export default function ApiKeyInput() {
             </div>
           )}
 
+          {isValidating && (
+            <div className="rounded-lg bg-[#eff6ff] px-4 py-2 text-xs text-[#1e40af]">
+              Validating API key with OpenAI...
+            </div>
+          )}
+
           {success && (
             <div className="rounded-lg bg-[#f0fdf4] px-4 py-2 text-xs text-[#166534]">
-              API key saved securely to IndexedDB
+              API key validated and saved securely
             </div>
           )}
 
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={!apiKey.trim()}
+            disabled={!apiKey.trim() || isValidating}
             className="w-full rounded-full bg-[#1d1c1a] px-6 py-3 text-sm font-semibold text-[#f6f1ea] transition hover:-translate-y-0.5 hover:bg-[#2b2926] disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-[#1d1c1a]/30"
           >
-            Save API Key
+            {isValidating ? "Validating..." : "Save API Key"}
           </button>
 
           <p className="text-xs text-[#7b7872]">
